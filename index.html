@@ -63,7 +63,13 @@
       display: flex; align-items: center; gap: 7px; font-size: 0.78rem; color: var(--muted);
       border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; background: var(--panel);
     }
-    .info-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); display: block; }
+    .info-pill b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .info-pill .sig { width: 16px; height: 16px; fill: none; stroke: var(--teal); stroke-width: 2.6; stroke-linecap: round; }
+    .info-pill .sig path { animation: sigpulse 1.8s infinite; }
+    .info-pill .sig path:nth-child(2) { animation-delay: .15s; }
+    .info-pill .sig path:nth-child(3) { animation-delay: .3s; }
+    .info-pill .sig path:nth-child(4) { animation-delay: .45s; }
+    @keyframes sigpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
     /* ---------- Stage (grid + controls) ---------- */
     .stage {
@@ -218,7 +224,7 @@
 
     @media (max-width: 800px) {
       .top { padding: 10px 12px; }
-      .info-pill { display: none; }
+      .info-pill { padding: 5px 10px; }
       .ctrl-bar { padding: 0 8px 6px; }
       #vol { display: none; }
       .grid { gap: 6px; padding: 6px; }
@@ -237,12 +243,15 @@
       <div class="logo-icon">PBB</div>
       <div>
         <h1>PBB LIVE ACCESS</h1>
-        <small>Shaka + ClearKey</small>
+        <small>PBB LIVE ACCESS</small>
       </div>
     </div>
     <div class="status-right">
       <div class="live-pill"><span></span> LIVE</div>
-      <div class="info-pill"><i></i><span id="statusText">Connecting 4 feeds…</span></div>
+      <div class="info-pill" title="Mga nanonood ngayon">
+        <svg class="sig" viewBox="0 0 24 24"><path d="M4 20v-3"/><path d="M10 20v-7"/><path d="M16 20V9"/><path d="M22 20V4"/></svg>
+        <b id="viewerCount">1</b><span>watching</span>
+      </div>
     </div>
   </header>
 
@@ -254,7 +263,7 @@
         <video id="v1" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
         <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
-        <div class="overlay-bottom"><div class="cam-title">Main Stage</div><div class="cam-num">Camera 01 · Collab Cam</div></div>
+        <div class="overlay-bottom"><div class="cam-title">Main Stage</div><div class="cam-num">Camera 01</div></div>
       </div>
 
       <div class="cam" data-id="2">
@@ -380,7 +389,6 @@
     let currentQuality = 'AUTO';
     const volumes = { 1: 70, 2: 70, 3: 70, 4: 70 };
     const CAM_NAMES = { 1: 'Main Stage', 2: 'All Access', 3: 'External Den', 4: 'Dining Area' };
-    let connectedCount = 0;
 
     // AUTO keeps the original 720p cap so 4 feeds stay light
     const AUTO_MAX_HEIGHT = 720;
@@ -480,8 +488,6 @@
         updateBadge(i);
 
         if (loader) loader.classList.add('hide');
-        connectedCount++;
-        $('statusText').textContent = connectedCount + ' / 4 feeds connected';
       } catch (err) {
         console.error('Cam', i, 'failed', err);
         if (loader) {
@@ -710,6 +716,54 @@
         if (v && v.webkitEnterFullscreen) v.webkitEnterFullscreen();
       }
     });
+
+    /* ---------------- Viewer counter ----------------
+       Para sa TOTOONG bilang ng lahat ng nanonood, kailangan ng maliit na server.
+       Ilagay ang URL niya dito (dapat mag-return ng {"count": 12}).
+       Kapag walang URL, mga tab lang sa browser na ito ang binibilang. */
+    const PRESENCE_URL = '';
+
+    const viewerEl = $('viewerCount');
+    const myId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const peers = new Map();
+    let remoteCount = null;
+
+    function showViewers() {
+      const now = Date.now();
+      for (const [id, t] of peers) if (now - t > 12000) peers.delete(id);
+      const n = remoteCount !== null ? remoteCount : peers.size + 1;
+      viewerEl.textContent = Math.max(1, n).toLocaleString();
+    }
+
+    try {
+      const bc = new BroadcastChannel('pbb-presence');
+      bc.onmessage = e => {
+        if (e.data && e.data.id && e.data.id !== myId) {
+          if (e.data.bye) peers.delete(e.data.id);
+          else peers.set(e.data.id, Date.now());
+          showViewers();
+        }
+      };
+      const ping = () => bc.postMessage({ id: myId });
+      ping();
+      setInterval(ping, 5000);
+      window.addEventListener('pagehide', () => { try { bc.postMessage({ id: myId, bye: true }); } catch (e) {} });
+    } catch (e) {}
+
+    async function remotePing() {
+      if (!PRESENCE_URL) return;
+      try {
+        const r = await fetch(PRESENCE_URL + (PRESENCE_URL.includes('?') ? '&' : '?') + 'id=' + myId, { cache: 'no-store' });
+        const d = await r.json();
+        const n = typeof d === 'number' ? d : d.count;
+        remoteCount = Number.isFinite(n) ? n : null;
+      } catch (e) { remoteCount = null; }
+      showViewers();
+    }
+    remotePing();
+    setInterval(remotePing, 15000);
+    setInterval(showViewers, 5000);
+    showViewers();
 
     applySpeed();
     setLayout(4);
