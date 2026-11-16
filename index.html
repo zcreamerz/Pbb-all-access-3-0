@@ -78,6 +78,11 @@
     }
     .stage:is(:fullscreen, .pfs) { width: 100vw; height: 100vh; height: 100dvh; }
     .stage.pfs { position: fixed; top: 0; left: 0; z-index: 9999; }
+    .stage:is(:fullscreen, .pfs) .grid { padding: 0; gap: 2px; }
+    .stage:is(:fullscreen, .pfs) .cam { border-radius: 0; border: 0; }
+    /* per-camera speaker: itaas sa ibabaw ng control bar, at itago kasabay nito kapag idle */
+    .stage:is(:fullscreen, .pfs) .audio-ctl { bottom: 96px; right: 14px; transition: opacity 0.3s; }
+    .stage.idle .audio-ctl { opacity: 0; pointer-events: none; }
     .stage:is(:fullscreen, .pfs).idle { cursor: none; }
 
     .grid {
@@ -765,7 +770,8 @@
       for (let i = 1; i <= 4; i++) {
         const v = videos[i];
         if (!v) continue;
-        v.muted = audioLocked || muted || !audioOn[i];
+        const hidden = cams[i - 1] && cams[i - 1].classList.contains('off');
+        v.muted = audioLocked || muted || !audioOn[i] || hidden;
         v.volume = Math.max(0, Math.min(1, (volumes[i] / 100) * (masterVol / 100)));
       }
       cams.forEach(c => {
@@ -776,8 +782,23 @@
         c.querySelector('.cam-vol').value = volumes[id];
       });
       volSlider.value = masterVol;
-      muteBtn.innerHTML = muted ? ICON_MUTE : ICON_VOL;
-      muteBtn.title = muted ? 'Unmute all' : 'Mute all';
+      const aud = isAudible();
+      muteBtn.innerHTML = aud ? ICON_VOL : ICON_MUTE;
+      muteBtn.title = aud ? 'Mute all' : 'Unmute';
+    }
+
+    function visibleIds() {
+      return [...cams].filter(c => !c.classList.contains('off')).map(c => +c.dataset.id);
+    }
+    // may naririnig ba talaga? (hindi naka-mute at may camera na naka-on ang tunog)
+    function isAudible() {
+      return !muted && visibleIds().some(id => audioOn[id]);
+    }
+    // kung wala pang camera na naka-on ang tunog, buksan ang isa (yung pinapanood, o All Access sa multi-view)
+    function ensureAudioOn() {
+      const ids = visibleIds();
+      if (!ids.length || ids.some(id => audioOn[id])) return;
+      for (let i = 1; i <= 4; i++) audioOn[i] = true;   // master: lahat ng camera
     }
 
     function toggleCamAudio(id) {
@@ -829,10 +850,14 @@
       if (e.key === 'Escape' && expanded !== null && !document.fullscreenElement) goBack();
     });
 
-    muteBtn.addEventListener('click', () => { muted = !muted; applyAudio(); });
+    muteBtn.addEventListener('click', () => {
+      if (isAudible()) { muted = true; }
+      else { muted = false; ensureAudioOn(); }
+      applyAudio();
+    });
     volSlider.addEventListener('input', e => {
       masterVol = +e.target.value;
-      if (muted && masterVol > 0) muted = false;
+      if (masterVol > 0) { muted = false; ensureAudioOn(); }
       applyAudio();
     });
 
@@ -970,10 +995,16 @@
         const w = Math.min(cellW, cellH * 16 / 9);
         if (w > best.w + 0.5) best = { w, c, r };
       }
-      const w = Math.floor(best.w);
-      const h = Math.floor(w * 9 / 16);
-      grid.style.gridTemplateColumns = `repeat(${best.c}, ${w}px)`;
-      grid.style.gridTemplateRows = `repeat(${best.r}, ${h}px)`;
+      if (n === 1 && isFs()) {
+        // fullscreen + isang camera: buong screen talaga (object-fit: contain ang bahala sa video)
+        grid.style.gridTemplateColumns = Math.floor(W) + 'px';
+        grid.style.gridTemplateRows = Math.floor(H) + 'px';
+      } else {
+        const w = Math.floor(best.w);
+        const h = Math.floor(w * 9 / 16);
+        grid.style.gridTemplateColumns = `repeat(${best.c}, ${w}px)`;
+        grid.style.gridTemplateRows = `repeat(${best.r}, ${h}px)`;
+      }
       if (typeof chatReserve === 'function') chatReserve();
     }
 
@@ -992,12 +1023,29 @@
       if (on) wake(); else { clearTimeout(idleTimer); stage.classList.remove('idle'); }
       setTimeout(fitGrid, 100);
     }
+    const isTouch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+    function lockLandscape() {
+      try {
+        if (isTouch && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+      } catch (e) {}
+    }
+    function unlockOrientation() {
+      try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+    }
     function enterFs() {
       const req = stage.requestFullscreen || stage.webkitRequestFullscreen;
-      if (!req) { setPfs(true); return; }
+      if (!req) {
+        // iPhone Safari: walang element fullscreen. Kung isang camera lang ang nakikita, gamitin ang native video fullscreen
+        const vis = [...cams].filter(c => !c.classList.contains('off'));
+        const v = vis.length === 1 ? vis[0].querySelector('video') : null;
+        if (v && v.webkitEnterFullscreen) { try { v.webkitEnterFullscreen(); return; } catch (e) {} }
+        setPfs(true);
+        return;
+      }
       try {
-        const r = req.call(stage);
-        if (r && r.catch) r.catch(() => setPfs(true));
+        const r = req.call(stage, { navigationUI: 'hide' });
+        if (r && r.then) r.then(lockLandscape).catch(() => setPfs(true));
+        else lockLandscape();
       } catch (e) { setPfs(true); }
     }
     function exitFs() {
@@ -1021,7 +1069,7 @@
     );
     document.addEventListener('fullscreenchange', () => {
       if (document.fullscreenElement) wake();
-      else { clearTimeout(idleTimer); stage.classList.remove('idle'); }
+      else { clearTimeout(idleTimer); stage.classList.remove('idle'); unlockOrientation(); }
       setTimeout(fitGrid, 100);
     });
 
