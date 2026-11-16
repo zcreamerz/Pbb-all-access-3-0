@@ -307,6 +307,22 @@
     .chat-row input { flex: 1; }
     .chat-row button { background: var(--teal); color: #000; border: 0; border-radius: 8px; padding: 0 14px; font: inherit; font-weight: 700; font-size: .8rem; cursor: pointer; }
     .chat-note { font-size: .68rem; color: var(--red); min-height: 1em; }
+    .chat-msgs { min-height: 0; }
+    .chat-gif { display: block; margin-top: 4px; max-width: 100%; max-height: 130px; border-radius: 8px; background: #000; }
+    .chat-tool { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 0 9px; font: inherit; font-size: .95rem; cursor: pointer; line-height: 1; }
+    .chat-tool.gif { font-size: .68rem; font-weight: 700; letter-spacing: .4px; }
+    .chat-tool:hover, .chat-tool.on { border-color: var(--teal); color: var(--teal); }
+    .chat-pop { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 6px; max-height: 170px; overflow-y: auto; }
+    .chat-pop[hidden] { display: none; }
+    .emo-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .emo-grid button { background: none; border: 0; font-size: 1.25rem; padding: 4px 0; border-radius: 6px; cursor: pointer; line-height: 1.1; }
+    .emo-grid button:hover { background: var(--teal-dim); }
+    .gif-search { width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 6px 9px; font: inherit; font-size: .78rem; outline: none; margin-bottom: 6px; }
+    .gif-search:focus { border-color: var(--teal); }
+    .gif-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+    .gif-grid img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; cursor: pointer; background: #000; display: block; }
+    .gif-grid img:hover { outline: 2px solid var(--teal); }
+    .gif-msg { color: var(--muted); font-size: .72rem; text-align: center; padding: 8px 4px; grid-column: 1 / -1; }
   </style>
 </head>
 <body>
@@ -338,9 +354,12 @@
           <input id="chatEdit" maxlength="20" autocomplete="off" />
           <button type="button" id="chatRename">Change name</button>
         </div>
-        <div class="chat-msgs" id="chatMsgs"><div class="chat-empty" id="chatEmpty">Wala pang chat. Mauna ka na!</div></div>
+        <div class="chat-msgs" id="chatMsgs"><div class="chat-empty" id="chatEmpty">No message yet</div></div>
         <div class="chat-foot">
+          <div class="chat-pop" id="chatPop" hidden></div>
           <div class="chat-row">
+            <button type="button" class="chat-tool" id="emoBtn" title="Emoji">😊</button>
+            <button type="button" class="chat-tool gif" id="gifBtn" title="GIF">GIF</button>
             <input id="chatText" maxlength="200" placeholder="Mag-chat..." autocomplete="off" />
             <button type="button" id="chatSend">Send</button>
           </div>
@@ -1123,13 +1142,104 @@
       const row = document.createElement('div');
       row.className = 'chat-msg' + (m.id === myId ? ' me' : '');
       const b = document.createElement('b'); b.textContent = String(m.name || 'Viewer').slice(0, 20);
-      const t = document.createElement('span'); t.textContent = m.text.slice(0, 200);
-      row.append(b, t);
+      const gm = /^\[gif:([A-Za-z0-9]{5,30})\]$/.exec(m.text.trim());
+      if (gm) {
+        const im = document.createElement('img');
+        im.className = 'chat-gif'; im.loading = 'lazy'; im.alt = 'GIF';
+        im.src = 'https://media.giphy.com/media/' + gm[1] + '/giphy.gif';
+        row.append(b, im);
+      } else {
+        const t = document.createElement('span'); t.textContent = m.text.slice(0, 200);
+        row.append(b, t);
+      }
       const atBottom = chatMsgs.scrollHeight - chatMsgs.scrollTop - chatMsgs.clientHeight < 40;
       chatMsgs.appendChild(row);
       while (chatMsgs.children.length > 100) chatMsgs.firstChild.remove();
       if (atBottom || m.id === myId) chatMsgs.scrollTop = chatMsgs.scrollHeight;
       if (!silent && !chatWrap.classList.contains('open')) chatDot.style.display = 'block';
+    }
+
+    /* ---------- Emoji + GIF ---------- */
+    // Ilagay dito ang Giphy API key mo (libre sa developers.giphy.com). Kapag walang laman, emoji lang ang gagana.
+    const GIPHY_KEY = 'ZH2mmHoFynhcRPwGWHmkDsV6koVLBB5E';
+
+    const EMOJIS = ['😂','🤣','😍','🥰','😘','😭','🥹','😅','😎','🤩','😱','😡','🤯','🥲',
+      '😴','🤔','🤭','😳','😬','😤','😢','😆','👍','👎','👏','🙌','🙏','🫶','💪','👀',
+      '❤️','💔','🔥','✨','🎉','💯','💀','🌹','😜','🫣','🤗','😇','🥳','😏','🤝','👑'];
+    const chatPop = $('chatPop'), emoBtn = $('emoBtn'), gifBtn = $('gifBtn');
+    let popMode = null, gifTimer = null;
+
+    function closePop() { popMode = null; chatPop.hidden = true; emoBtn.classList.remove('on'); gifBtn.classList.remove('on'); }
+
+    function insertEmoji(e) {
+      const i = chatText.selectionStart == null ? chatText.value.length : chatText.selectionStart;
+      const j = chatText.selectionEnd == null ? i : chatText.selectionEnd;
+      const v = chatText.value.slice(0, i) + e + chatText.value.slice(j);
+      if (v.length > chatText.maxLength) return;
+      chatText.value = v;
+      chatText.focus();
+      try { chatText.setSelectionRange(i + e.length, i + e.length); } catch (err) {}
+    }
+
+    function showEmoji() {
+      chatPop.innerHTML = '<div class="emo-grid"></div>';
+      const g = chatPop.firstChild;
+      EMOJIS.forEach(e => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = e;
+        b.addEventListener('click', () => insertEmoji(e));
+        g.appendChild(b);
+      });
+    }
+
+    function gifMsg(g, text) { g.innerHTML = ''; const d = document.createElement('div'); d.className = 'gif-msg'; d.textContent = text; g.appendChild(d); }
+
+    async function loadGifs(q, g) {
+      if (!GIPHY_KEY) { gifMsg(g, 'Wala pang Giphy API key. Emoji lang muna.'); return; }
+      gifMsg(g, 'Naghahanap...');
+      try {
+        const url = 'https://api.giphy.com/v1/gifs/' + (q ? 'search' : 'trending') +
+          '?api_key=' + encodeURIComponent(GIPHY_KEY) + (q ? '&q=' + encodeURIComponent(q) : '') +
+          '&limit=20&rating=g';
+        const r = await fetch(url);
+        const j = await r.json();
+        const list = (j && j.data) || [];
+        if (!list.length) { gifMsg(g, 'Walang nakita.'); return; }
+        g.innerHTML = '';
+        list.forEach(it => {
+          const th = it.images && (it.images.fixed_width_small || it.images.fixed_width);
+          if (!th || !/^[A-Za-z0-9]{5,30}$/.test(it.id)) return;
+          const im = document.createElement('img');
+          im.src = th.url; im.alt = 'GIF'; im.loading = 'lazy';
+          im.addEventListener('click', () => sendGif(it.id));
+          g.appendChild(im);
+        });
+      } catch (e) { gifMsg(g, 'Hindi ma-load ang GIFs.'); }
+    }
+
+    function showGif() {
+      chatPop.innerHTML = '<input class="gif-search" id="gifQ" placeholder="Maghanap ng GIF..." maxlength="40" autocomplete="off" /><div class="gif-grid" id="gifGrid"></div>';
+      const q = $('gifQ'), g = $('gifGrid');
+      q.addEventListener('input', () => { clearTimeout(gifTimer); gifTimer = setTimeout(() => loadGifs(q.value.trim(), g), 450); });
+      q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(gifTimer); loadGifs(q.value.trim(), g); } });
+      loadGifs('', g);
+    }
+
+    function openPop(mode) {
+      if (popMode === mode) { closePop(); return; }
+      popMode = mode;
+      chatPop.hidden = false;
+      emoBtn.classList.toggle('on', mode === 'emoji');
+      gifBtn.classList.toggle('on', mode === 'gif');
+      if (mode === 'emoji') showEmoji(); else showGif();
+    }
+    emoBtn.addEventListener('click', () => openPop('emoji'));
+    gifBtn.addEventListener('click', () => openPop('gif'));
+
+    function sendGif(id) {
+      if (!presenceWS || presenceWS.readyState !== 1) { chatSay('Hindi pa konektado. Subukan ulit sa ilang segundo.'); return; }
+      presenceWS.send(JSON.stringify({ type: 'chat', id: myId, name: myName, text: '[gif:' + id + ']' }));
+      closePop();
     }
 
     let noteTimer = null;
