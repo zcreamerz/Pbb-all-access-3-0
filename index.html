@@ -166,7 +166,7 @@
     /* ---------- Player control bar ---------- */
     .ctrl-bar {
       flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
-      gap: 10px; padding: 0 24px 8px; transition: opacity 0.3s; flex-wrap: wrap;
+      gap: 10px; padding: 0 24px 8px; transition: opacity 0.3s; flex-wrap: wrap; justify-content: flex-end;
     }
     .stage:is(:fullscreen, .pfs) .ctrl-bar {
       position: absolute; left: 0; right: 0; bottom: 0; z-index: 15;
@@ -176,7 +176,7 @@
     .stage:is(:fullscreen, .pfs) .ctrl-bar .ctrl-group,
     .stage:is(:fullscreen, .pfs) .ctrl-bar .q-select { pointer-events: auto; }
     .stage.idle .ctrl-bar { opacity: 0; pointer-events: none; }
-    .ctrl-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ctrl-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
 
     .ctrl-group {
       display: flex; align-items: center; gap: 4px;
@@ -193,6 +193,13 @@
     .ctrl-btn.txt { font-size: 1.1rem; font-weight: 600; line-height: 1; }
 
     #vol { width: 90px; accent-color: var(--teal); cursor: pointer; margin: 0 10px 0 2px; }
+    .boost-btn {
+      height: 34px; padding: 0 14px; border: none; border-radius: 999px; background: transparent;
+      color: var(--muted); font-family: inherit; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.6px; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .boost-btn:hover { color: var(--text); }
+    .boost-btn.on { background: var(--teal-dim); color: var(--teal); }
     .spd-val {
       min-width: 46px; text-align: center; font-size: 0.8rem; font-weight: 600;
       font-variant-numeric: tabular-nums; color: var(--text);
@@ -328,16 +335,20 @@
 
     <!-- Player controls -->
     <div class="ctrl-bar" id="ctrlBar">
-      <div class="ctrl-group">
-        <button class="ctrl-btn" id="muteBtn" type="button" title="Mute all"></button>
-        <input type="range" id="vol" min="0" max="100" value="70" title="Master volume" />
-      </div>
-
       <div class="ctrl-right">
         <div class="ctrl-group" id="zoomGroup" title="Zoom (drag the video to move around when zoomed)">
           <button class="ctrl-btn txt" id="spdDown" type="button" aria-label="Zoom out">−</button>
           <span class="spd-val" id="spdVal">1.0x</span>
           <button class="ctrl-btn txt" id="spdUp" type="button" aria-label="Zoom in">+</button>
+        </div>
+
+        <div class="ctrl-group" title="Volume">
+          <button class="ctrl-btn" id="muteBtn" type="button" title="Mute all"></button>
+          <input type="range" id="vol" min="0" max="100" value="70" title="Master volume" />
+        </div>
+
+        <div class="ctrl-group" id="boostGroup">
+          <button class="boost-btn" id="boostBtn" type="button" title="Boost volume (louder than 100%)" aria-pressed="false">BOOST</button>
         </div>
 
         <select class="q-select" id="quality" title="Quality">
@@ -746,6 +757,42 @@
       if (muted && masterVol > 0) muted = false;
       applyAudio();
     });
+
+    /* ---------------- Boost (volume above 100%) ---------------- */
+    const BOOST_LEVEL = 2; // loudness when Boost is ON (2x)
+    let boost = 1, audioCtx = null;
+    const boostGains = {};
+
+    function ensureBoostGraph() {
+      if (audioCtx) return true;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+        for (let i = 1; i <= 4; i++) {
+          const src = audioCtx.createMediaElementSource(videos[i]);
+          const g = audioCtx.createGain();
+          const limiter = audioCtx.createDynamicsCompressor(); // keeps boosted sound from crackling
+          src.connect(g); g.connect(limiter); limiter.connect(audioCtx.destination);
+          boostGains[i] = g;
+        }
+        return true;
+      } catch (e) {
+        console.warn('Boost unavailable', e);
+        audioCtx = null;
+        return false;
+      }
+    }
+
+    function applyBoost() {
+      if (boost > 1 && !ensureBoostGraph()) boost = 1;
+      if (audioCtx) {
+        audioCtx.resume().catch(() => {});
+        for (let i = 1; i <= 4; i++) if (boostGains[i]) boostGains[i].gain.value = boost;
+      }
+      $('boostBtn').classList.toggle('on', boost > 1);
+      $('boostBtn').setAttribute('aria-pressed', boost > 1 ? 'true' : 'false');
+    }
+    $('boostBtn').addEventListener('click', () => { boost = boost > 1 ? 1 : BOOST_LEVEL; applyBoost(); });
 
     /* ---------------- Zoom ---------------- */
     const ZOOM_MIN = 1, ZOOM_MAX = 4, ZOOM_STEP = 0.25;
