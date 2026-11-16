@@ -111,6 +111,9 @@
       object-fit: contain; display: block; background: #000;
     }
     .grid.two .cam, .grid.four .cam { cursor: pointer; }
+    .cam video { transform-origin: center center; will-change: transform; }
+    .cam.zoomed { cursor: grab; touch-action: none; }
+    .cam.zoomed.panning { cursor: grabbing; }
 
     .back-btn {
       display: none; position: absolute; top: 8px; left: 58px; z-index: 7;
@@ -129,7 +132,6 @@
       background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); border-radius: 20px;
       padding: 3px 8px 3px 4px;
     }
-    .grid.one .audio-ctl { display: none; }
     .spk { background: none; border: none; color: var(--text); font-size: 0.95rem; line-height: 1; cursor: pointer; padding: 3px 4px; }
     .cam .cam-vol { display: none; width: 70px; accent-color: var(--teal); cursor: pointer; }
     .cam.audio .cam-vol, .cam:hover .cam-vol { display: block; }
@@ -289,7 +291,7 @@
       <div class="cam" data-id="1">
         <div class="overlay-top"><span class="badge-live">LIVE</span><span class="badge-q" data-q>AUTO</span></div>
         <div class="loader" id="load1"><div class="spin"></div><span>Connecting...</span></div>
-        <video id="v1" muted playsinline crossorigin="anonymous"></video>
+        <video id="v1" playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
         <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
         <div class="overlay-bottom"><div class="cam-title">Main Stage</div><div class="cam-num">Camera 01</div></div>
@@ -298,7 +300,7 @@
       <div class="cam" data-id="2">
         <div class="overlay-top"><span class="badge-live">LIVE</span><span class="badge-q" data-q>AUTO</span></div>
         <div class="loader" id="load2"><div class="spin"></div><span>Connecting...</span></div>
-        <video id="v2" muted playsinline crossorigin="anonymous"></video>
+        <video id="v2" playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
         <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
         <div class="overlay-bottom"><div class="cam-title">All Access</div><div class="cam-num">Camera 02</div></div>
@@ -307,7 +309,7 @@
       <div class="cam" data-id="3">
         <div class="overlay-top"><span class="badge-live">LIVE</span><span class="badge-q" data-q>AUTO</span></div>
         <div class="loader" id="load3"><div class="spin"></div><span>Connecting...</span></div>
-        <video id="v3" muted playsinline crossorigin="anonymous"></video>
+        <video id="v3" playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
         <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
         <div class="overlay-bottom"><div class="cam-title">External Den</div><div class="cam-num">Camera 03</div></div>
@@ -316,7 +318,7 @@
       <div class="cam" data-id="4">
         <div class="overlay-top"><span class="badge-live">LIVE</span><span class="badge-q" data-q>AUTO</span></div>
         <div class="loader" id="load4"><div class="spin"></div><span>Connecting...</span></div>
-        <video id="v4" muted playsinline crossorigin="anonymous"></video>
+        <video id="v4" playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
         <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
         <div class="overlay-bottom"><div class="cam-title">Dining Area</div><div class="cam-num">Camera 04</div></div>
@@ -328,15 +330,15 @@
     <!-- Player controls -->
     <div class="ctrl-bar" id="ctrlBar">
       <div class="ctrl-group">
-        <button class="ctrl-btn" id="muteBtn" type="button" title="Mute / Unmute"></button>
-        <input type="range" id="vol" min="0" max="100" value="70" title="Volume" />
+        <button class="ctrl-btn" id="muteBtn" type="button" title="Mute all"></button>
+        <input type="range" id="vol" min="0" max="100" value="70" title="Master volume" />
       </div>
 
       <div class="ctrl-right">
-        <div class="ctrl-group" title="Playback speed">
-          <button class="ctrl-btn txt" id="spdDown" type="button" aria-label="Slower">−</button>
+        <div class="ctrl-group" title="Zoom (drag the video to move around when zoomed)">
+          <button class="ctrl-btn txt" id="spdDown" type="button" aria-label="Zoom out">−</button>
           <span class="spd-val" id="spdVal">1.0x</span>
-          <button class="ctrl-btn txt" id="spdUp" type="button" aria-label="Faster">+</button>
+          <button class="ctrl-btn txt" id="spdUp" type="button" aria-label="Zoom in">+</button>
         </div>
 
         <select class="q-select" id="quality" title="Quality">
@@ -424,13 +426,16 @@
 
     const $ = id => document.getElementById(id);
     const players = {};
+    const reloadTimers = {};
     const videos = {};
     let focus = 0;
     let layout = 4;
-    let muted = true;
-    let audioId = 1;
+    let muted = false;                      // master mute (bottom bar)
+    let masterVol = 100;                    // master volume (bottom bar)
+    const audioOn = { 1: false, 2: true, 3: false, 4: false }; // per-camera sound: any number can be on
+    let audioLocked = false; // browser blocked sound-on autoplay until first click/tap
     let expanded = null;
-    let speed = 1;
+    let zoom = 1, panX = 0, panY = 0;
     let currentQuality = 'AUTO';
     const volumes = { 1: 70, 2: 70, 3: 70, 4: 70 };
     const CAM_NAMES = { 1: 'Main Stage', 2: 'All Access', 3: 'External Den', 4: 'Dining Area' };
@@ -515,20 +520,40 @@
         player.configure({
           abr: { enabled: true, restrictions: { maxHeight: AUTO_MAX_HEIGHT } },
           manifest: { dash: { clockSyncUri: 'https://time.akamai.com/?iso&ms' } },
-          streaming: { bufferingGoal: 20, rebufferingGoal: 4, bufferBehind: 30 }
+          streaming: {
+            bufferingGoal: 20, rebufferingGoal: 4, bufferBehind: 30,
+            retryParameters: { maxAttempts: 6, baseDelay: 500, backoffFactor: 2, fuzzFactor: 0.5, timeout: 20000 }
+          }
         });
+        player.configure('manifest.retryParameters',
+          { maxAttempts: 6, baseDelay: 500, backoffFactor: 2, fuzzFactor: 0.5, timeout: 20000 });
 
         player.addEventListener('error', ev => {
           const detail = (ev && ev.detail) || {};
-          console.warn('Cam', i, 'error', detail.code, detail.message || detail);
+          console.warn('Cam', i, 'error', detail.code, detail.message || detail, detail.data);
+          // severity 2 = critical: reload the stream after a short delay
+          if (detail.severity === 2) {
+            clearTimeout(reloadTimers[i]);
+            reloadTimers[i] = setTimeout(async () => {
+              try { await player.load(STREAMS[i]); await vid.play(); applyQualityTo(i); } catch (e) {}
+            }, 3000);
+          }
         });
         player.addEventListener('variantchanged', () => updateBadge(i));
         player.addEventListener('adaptation', () => updateBadge(i));
 
         await player.load(STREAMS[i]);
-        try { await vid.play(); } catch (e) {}
+        try {
+          await vid.play();
+        } catch (e) {
+          // browser won't autoplay with sound: play muted now, unmute on first click/tap
+          if (e && e.name === 'NotAllowedError') {
+            audioLocked = true;
+            applyAudio();
+            try { await vid.play(); } catch (e2) {}
+          }
+        }
 
-        vid.playbackRate = speed;
         applyQualityTo(i);
         updateBadge(i);
 
@@ -589,21 +614,14 @@
       } else if (n === 1) {
         grid.classList.add('one');
         cams.forEach((c, i) => { if (i !== focus) c.classList.add('off'); });
-        audioId = focus + 1;
       } else if (n === 2) {
         grid.classList.add('two');
         cams.forEach((c, i) => {
           const k = slots.indexOf(i);
           if (k < 0) c.classList.add('off'); else c.style.order = k;
         });
-        if (!slots.includes(audioId - 1)) audioId = slots[0] + 1;
       } else {
         grid.classList.add('four');
-      }
-      const src = cams[audioId - 1];
-      if (src && src.classList.contains('off')) {
-        const first = [...cams].find(c => !c.classList.contains('off'));
-        if (first) audioId = +first.dataset.id;
       }
       applyAudio();
       updateNav();
@@ -658,23 +676,24 @@
       for (let i = 1; i <= 4; i++) {
         const v = videos[i];
         if (!v) continue;
-        v.muted = muted || i !== audioId;
-        v.volume = volumes[i] / 100;
+        v.muted = audioLocked || muted || !audioOn[i];
+        v.volume = Math.max(0, Math.min(1, (volumes[i] / 100) * (masterVol / 100)));
       }
       cams.forEach(c => {
         const id = +c.dataset.id;
-        c.classList.toggle('audio', id === audioId);
-        c.querySelector('.spk').textContent = (id === audioId && !muted) ? '🔊' : '🔇';
+        c.classList.toggle('audio', !!audioOn[id]);
+        c.querySelector('.spk').textContent = audioOn[id] ? '🔊' : '🔇';
+        c.querySelector('.spk').title = audioOn[id] ? 'Mute this camera' : 'Turn on sound for this camera';
         c.querySelector('.cam-vol').value = volumes[id];
       });
-      volSlider.value = volumes[audioId];
+      volSlider.value = masterVol;
       muteBtn.innerHTML = muted ? ICON_MUTE : ICON_VOL;
-      muteBtn.title = muted ? 'Unmute' : 'Mute';
+      muteBtn.title = muted ? 'Unmute all' : 'Mute all';
     }
 
-    function selectAudio(id, unmute) {
-      audioId = id;
-      if (unmute) muted = false;
+    function toggleCamAudio(id) {
+      audioOn[id] = !audioOn[id];
+      if (audioOn[id]) muted = false;  // turning a cam on should be heard
       applyAudio();
     }
 
@@ -696,16 +715,11 @@
         if (e.target.closest('.audio-ctl, .back-btn')) return;
         if (expanded === null && layout !== 1) {
           expanded = i;
-          audioId = id;
-          muted = false;
           setLayout(layout);
-        } else {
-          selectAudio(id, true);
         }
       });
       c.querySelector('.spk').addEventListener('click', () => {
-        if (audioId === id) { muted = !muted; applyAudio(); }
-        else selectAudio(id, true);
+        toggleCamAudio(id);
       });
       c.querySelector('.cam-vol').addEventListener('input', e => {
         volumes[id] = +e.target.value;
@@ -721,18 +735,68 @@
 
     muteBtn.addEventListener('click', () => { muted = !muted; applyAudio(); });
     volSlider.addEventListener('input', e => {
-      volumes[audioId] = +e.target.value;
-      if (muted && volumes[audioId] > 0) muted = false;
+      masterVol = +e.target.value;
+      if (muted && masterVol > 0) muted = false;
       applyAudio();
     });
 
-    /* ---------------- Speed ---------------- */
-    function applySpeed() {
-      Object.values(videos).forEach(v => { try { v.playbackRate = speed; } catch (e) {} });
-      $('spdVal').textContent = (Number.isInteger(speed * 10) ? speed.toFixed(1) : speed.toFixed(2)) + 'x';
+    /* ---------------- Zoom ---------------- */
+    const ZOOM_MIN = 1, ZOOM_MAX = 4, ZOOM_STEP = 0.25;
+
+    function clampPan() {
+      // use the largest visible cam box for the limit
+      let w = 0, h = 0;
+      cams.forEach(c => { if (!c.classList.contains('off')) { w = Math.max(w, c.clientWidth); h = Math.max(h, c.clientHeight); } });
+      const mx = (zoom - 1) * w / 2, my = (zoom - 1) * h / 2;
+      panX = Math.max(-mx, Math.min(mx, panX));
+      panY = Math.max(-my, Math.min(my, panY));
     }
-    $('spdDown').addEventListener('click', () => { speed = Math.max(0.5, Math.round((speed - 0.25) * 100) / 100); applySpeed(); });
-    $('spdUp').addEventListener('click',   () => { speed = Math.min(2,   Math.round((speed + 0.25) * 100) / 100); applySpeed(); });
+
+    function applyZoom() {
+      if (zoom <= 1) { panX = 0; panY = 0; } else clampPan();
+      Object.values(videos).forEach(v => {
+        v.style.transform = zoom > 1 ? 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')' : '';
+      });
+      cams.forEach(c => c.classList.toggle('zoomed', zoom > 1));
+      $('spdVal').textContent = zoom.toFixed(2).replace(/0$/, '') + 'x';
+    }
+    function setZoom(z) {
+      zoom = Math.round(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z)) * 100) / 100;
+      applyZoom();
+    }
+    $('spdDown').addEventListener('click', () => setZoom(zoom - ZOOM_STEP));
+    $('spdUp').addEventListener('click',   () => setZoom(zoom + ZOOM_STEP));
+
+    // mouse wheel zoom on the video
+    cams.forEach(c => c.addEventListener('wheel', e => {
+      e.preventDefault();
+      setZoom(zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+    }, { passive: false }));
+
+    // drag to pan when zoomed (and don't treat a drag as a click)
+    let drag = null, dragMoved = false;
+    cams.forEach(c => {
+      c.addEventListener('pointerdown', e => {
+        if (zoom <= 1 || e.target.closest('.audio-ctl, .back-btn')) return;
+        drag = { x: e.clientX, y: e.clientY, px: panX, py: panY, id: e.pointerId };
+        dragMoved = false;
+        try { c.setPointerCapture(e.pointerId); } catch (_) {}
+      });
+      c.addEventListener('pointermove', e => {
+        if (!drag || e.pointerId !== drag.id) return;
+        const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        if (!dragMoved && Math.abs(dx) + Math.abs(dy) < 5) return;
+        dragMoved = true;
+        c.classList.add('panning');
+        panX = drag.px + dx; panY = drag.py + dy;
+        applyZoom();
+      });
+      const end = () => { drag = null; c.classList.remove('panning'); };
+      c.addEventListener('pointerup', end);
+      c.addEventListener('pointercancel', end);
+      c.addEventListener('click', e => { if (dragMoved) { e.stopImmediatePropagation(); dragMoved = false; } }, true);
+    });
+    window.addEventListener('resize', applyZoom);
 
     /* ---------------- Quality select ---------------- */
     $('quality').addEventListener('change', e => {
@@ -885,8 +949,16 @@
     setInterval(showViewers, 5000);
     showViewers();
 
-    applySpeed();
+    applyZoom();
     setLayout(4);
+
+    // first click/tap/key lets the browser allow sound -> restore the default audio (All Access)
+    ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, function unlock() {
+      if (!audioLocked) return;
+      audioLocked = false;
+      applyAudio();
+      Object.values(videos).forEach(v => { if (v.paused) v.play().catch(() => {}); });
+    }, { passive: true }));
   </script>
 </body>
 </html>
