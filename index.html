@@ -104,7 +104,6 @@
       border: 1px solid var(--border); min-height: 0; min-width: 0; transition: border-color 0.15s;
     }
     .cam.off { display: none; }
-    .cam.audio { border-color: var(--teal); }
     .grid.one .cam { border-color: var(--border); }
     .cam video {
       position: absolute; inset: 0; width: 100%; height: 100%;
@@ -132,10 +131,11 @@
       background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); border-radius: 20px;
       padding: 3px 8px 3px 4px;
     }
-    .spk { background: none; border: none; color: var(--text); font-size: 0.95rem; line-height: 1; cursor: pointer; padding: 3px 4px; }
+    .spk { background: none; border: none; color: var(--text); line-height: 1; cursor: pointer; padding: 3px 4px; display: grid; place-items: center; }
+    .spk:hover, .cam.audio .spk { color: var(--teal); }
+    .spk svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
     .cam .cam-vol { display: none; width: 70px; accent-color: var(--teal); cursor: pointer; }
     .cam.audio .cam-vol, .cam:hover .cam-vol { display: block; }
-    .cam.audio .audio-ctl { border: 1px solid var(--teal); }
 
     .overlay-top {
       position: absolute; top: 10px; left: 10px; right: 10px;
@@ -150,7 +150,6 @@
       background: linear-gradient(transparent, rgba(0,0,0,0.75)); z-index: 5; pointer-events: none;
     }
     .cam-title { font-size: 0.9rem; font-weight: 600; }
-    .cam-num { font-size: 0.7rem; color: #a0a8b8; margin-top: 2px; }
 
     .loader {
       position: absolute; inset: 0; background: rgba(10,12,16,0.9);
@@ -291,37 +290,37 @@
       <div class="cam" data-id="1">
         <div class="overlay-top"><span class="badge-live">LIVE</span><span class="badge-q" data-q>AUTO</span></div>
         <div class="loader" id="load1"><div class="spin"></div><span>Connecting...</span></div>
-        <video id="v1" playsinline crossorigin="anonymous"></video>
+        <video id="v1" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
-        <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
-        <div class="overlay-bottom"><div class="cam-title">Main Stage</div><div class="cam-num">Camera 01</div></div>
+        <div class="audio-ctl"><button class="spk" type="button" title="Turn on sound for this camera"></button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
+        <div class="overlay-bottom"><div class="cam-title">Main Stage</div></div>
       </div>
 
       <div class="cam" data-id="2">
         <div class="overlay-top"><span class="badge-live">LIVE</span><span class="badge-q" data-q>AUTO</span></div>
         <div class="loader" id="load2"><div class="spin"></div><span>Connecting...</span></div>
-        <video id="v2" playsinline crossorigin="anonymous"></video>
+        <video id="v2" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
-        <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
-        <div class="overlay-bottom"><div class="cam-title">All Access</div><div class="cam-num">Camera 02</div></div>
+        <div class="audio-ctl"><button class="spk" type="button" title="Turn on sound for this camera"></button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
+        <div class="overlay-bottom"><div class="cam-title">All Access</div></div>
       </div>
 
       <div class="cam" data-id="3">
         <div class="overlay-top"><span class="badge-live">LIVE</span><span class="badge-q" data-q>AUTO</span></div>
         <div class="loader" id="load3"><div class="spin"></div><span>Connecting...</span></div>
-        <video id="v3" playsinline crossorigin="anonymous"></video>
+        <video id="v3" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
-        <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
-        <div class="overlay-bottom"><div class="cam-title">External Den</div><div class="cam-num">Camera 03</div></div>
+        <div class="audio-ctl"><button class="spk" type="button" title="Turn on sound for this camera"></button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
+        <div class="overlay-bottom"><div class="cam-title">External Den</div></div>
       </div>
 
       <div class="cam" data-id="4">
         <div class="overlay-top"><span class="badge-live">LIVE</span><span class="badge-q" data-q>AUTO</span></div>
         <div class="loader" id="load4"><div class="spin"></div><span>Connecting...</span></div>
-        <video id="v4" playsinline crossorigin="anonymous"></video>
+        <video id="v4" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
-        <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
-        <div class="overlay-bottom"><div class="cam-title">Dining Area</div><div class="cam-num">Camera 04</div></div>
+        <div class="audio-ctl"><button class="spk" type="button" title="Turn on sound for this camera"></button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
+        <div class="overlay-bottom"><div class="cam-title">Dining Area</div></div>
       </div>
 
       <button class="fs-exit" id="fsExit" type="button">← Back</button>
@@ -432,7 +431,7 @@
     let layout = 4;
     let muted = false;                      // master mute (bottom bar)
     let masterVol = 100;                    // master volume (bottom bar)
-    const audioOn = { 1: false, 2: true, 3: false, 4: false }; // per-camera sound: any number can be on
+    const audioOn = { 1: false, 2: false, 3: false, 4: false }; // per-camera sound: all muted on load, any number can be turned on
     let audioLocked = false; // browser blocked sound-on autoplay until first click/tap
     let expanded = null;
     let zoom = 1, panX = 0, panY = 0;
@@ -682,7 +681,7 @@
       cams.forEach(c => {
         const id = +c.dataset.id;
         c.classList.toggle('audio', !!audioOn[id]);
-        c.querySelector('.spk').textContent = audioOn[id] ? '🔊' : '🔇';
+        c.querySelector('.spk').innerHTML = audioOn[id] ? ICON_VOL : ICON_MUTE;
         c.querySelector('.spk').title = audioOn[id] ? 'Mute this camera' : 'Turn on sound for this camera';
         c.querySelector('.cam-vol').value = volumes[id];
       });
@@ -713,11 +712,18 @@
       const id = +c.dataset.id;
       c.addEventListener('click', e => {
         if (e.target.closest('.audio-ctl, .back-btn')) return;
+        // clicking a camera turns its sound on automatically
+        audioOn[id] = true;
+        muted = false;
+        applyAudio();
         if (expanded === null && layout !== 1) {
           expanded = i;
           setLayout(layout);
         }
       });
+      // keep clicks on the speaker/volume from reaching the cam's own click handler
+      // (the icon gets re-rendered, so closest() can no longer find .audio-ctl and would turn sound back on)
+      c.querySelector('.audio-ctl').addEventListener('click', e => e.stopPropagation());
       c.querySelector('.spk').addEventListener('click', () => {
         toggleCamAudio(id);
       });
