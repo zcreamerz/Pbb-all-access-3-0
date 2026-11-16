@@ -76,8 +76,9 @@
       position: relative; flex: 1; min-height: 0; min-width: 0;
       display: flex; flex-direction: column; background: var(--bg);
     }
-    .stage:fullscreen { width: 100vw; height: 100vh; height: 100dvh; }
-    .stage:fullscreen.idle { cursor: none; }
+    .stage:is(:fullscreen, .pfs) { width: 100vw; height: 100vh; height: 100dvh; }
+    .stage.pfs { position: fixed; top: 0; left: 0; z-index: 9999; }
+    .stage:is(:fullscreen, .pfs).idle { cursor: none; }
 
     .grid {
       flex: 1; display: grid; gap: 10px; padding: 12px; min-height: 0; min-width: 0;
@@ -95,7 +96,7 @@
       transition: opacity 0.3s, border-color 0.15s;
     }
     .fs-exit:hover { border-color: var(--teal); }
-    .stage:fullscreen .fs-exit { display: block; }
+    .stage:is(:fullscreen, .pfs) .fs-exit { display: block; }
     .stage.idle .fs-exit { opacity: 0; pointer-events: none; }
 
     .cam {
@@ -118,7 +119,7 @@
       padding: 4px 10px; font-family: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer;
     }
     .cam.expanded .back-btn { display: block; }
-    .stage:fullscreen .cam.expanded .back-btn { display: none; }
+    .stage:is(:fullscreen, .pfs) .cam.expanded .back-btn { display: none; }
     .back-btn:hover { background: rgba(0,0,0,0.9); border-color: var(--teal); }
 
     /* small per-camera speaker (multi-view only) */
@@ -166,12 +167,13 @@
       flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
       gap: 10px; padding: 0 24px 8px; transition: opacity 0.3s; flex-wrap: wrap;
     }
-    .stage:fullscreen .ctrl-bar {
+    .stage:is(:fullscreen, .pfs) .ctrl-bar {
       position: absolute; left: 0; right: 0; bottom: 0; z-index: 15;
       padding: 40px 24px 18px; background: linear-gradient(transparent, rgba(0,0,0,0.7));
       pointer-events: none;
     }
-    .stage:fullscreen .ctrl-bar .ctrl-group { pointer-events: auto; }
+    .stage:is(:fullscreen, .pfs) .ctrl-bar .ctrl-group,
+    .stage:is(:fullscreen, .pfs) .ctrl-bar .q-select { pointer-events: auto; }
     .stage.idle .ctrl-bar { opacity: 0; pointer-events: none; }
     .ctrl-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -625,6 +627,7 @@
     });
 
     document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && stage.classList.contains('pfs')) { setPfs(false); return; }
       if (e.key === 'Escape' && expanded !== null && !document.fullscreenElement) goBack();
     });
 
@@ -647,6 +650,7 @@
     $('quality').addEventListener('change', e => {
       currentQuality = e.target.value;
       applyQuality();
+      e.target.blur();
     });
 
     /* ---------------- Grid fit ---------------- */
@@ -682,12 +686,37 @@
 
     /* ---------------- Fullscreen + idle hide ---------------- */
     const fsExit = $('fsExit');
+
+    // iPhone Safari walang element fullscreen -> gumagamit tayo ng "pseudo fullscreen"
+    function isFs() { return !!document.fullscreenElement || stage.classList.contains('pfs'); }
+    function setPfs(on) {
+      stage.classList.toggle('pfs', on);
+      document.body.style.overflow = on ? 'hidden' : '';
+      if (on) wake(); else { clearTimeout(idleTimer); stage.classList.remove('idle'); }
+      setTimeout(fitGrid, 100);
+    }
+    function enterFs() {
+      const req = stage.requestFullscreen || stage.webkitRequestFullscreen;
+      if (!req) { setPfs(true); return; }
+      try {
+        const r = req.call(stage);
+        if (r && r.catch) r.catch(() => setPfs(true));
+      } catch (e) { setPfs(true); }
+    }
+    function exitFs() {
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      if (stage.classList.contains('pfs')) setPfs(false);
+    }
     let idleTimer;
     function wake() {
       stage.classList.remove('idle');
       clearTimeout(idleTimer);
-      if (document.fullscreenElement) {
-        idleTimer = setTimeout(() => stage.classList.add('idle'), 3000);
+      if (isFs()) {
+        idleTimer = setTimeout(() => {
+          // huwag itago ang bar habang nakaturo ang mouse o bukas ang quality menu
+          if ($('ctrlBar').matches(':hover') || document.activeElement === $('quality')) { wake(); return; }
+          stage.classList.add('idle');
+        }, 3000);
       }
     }
     ['mousemove', 'touchstart', 'click', 'keydown'].forEach(ev =>
@@ -701,27 +730,15 @@
 
     fsExit.addEventListener('click', () => {
       if (expanded !== null) goBack();
-      else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else exitFs();
     });
 
-    $('fsBtn').addEventListener('click', () => {
-      if (document.fullscreenElement) { document.exitFullscreen(); return; }
-      if (stage.requestFullscreen) {
-        stage.requestFullscreen().catch(() => {});
-      } else if (stage.webkitRequestFullscreen) {
-        stage.webkitRequestFullscreen();
-      } else {
-        // iPhone Safari: only the video element can go fullscreen
-        const v = videos[audioId];
-        if (v && v.webkitEnterFullscreen) v.webkitEnterFullscreen();
-      }
-    });
+    $('fsBtn').addEventListener('click', () => { isFs() ? exitFs() : enterFs(); });
 
     /* ---------------- Viewer counter ----------------
-       Para sa TOTOONG bilang ng lahat ng nanonood, kailangan ng maliit na server.
-       Ilagay ang URL niya dito (dapat mag-return ng {"count": 12}).
-       Kapag walang URL, mga tab lang sa browser na ito ang binibilang. */
-    const PRESENCE_URL = 'https://pbb-presence.onrender.com';
+       Ilagay dito ang URL ng presence Worker (hal. 'https://pbb-presence.YOURNAME.workers.dev').
+       Kapag walang URL o hindi maka-connect, mga tab lang sa browser na ito ang binibilang. */
+    const PRESENCE_URL = '';
 
     const viewerEl = $('viewerCount');
     const myId = Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -750,18 +767,33 @@
       window.addEventListener('pagehide', () => { try { bc.postMessage({ id: myId, bye: true }); } catch (e) {} });
     } catch (e) {}
 
-    async function remotePing() {
+    let presenceWS = null, presenceRetry = 0, presencePing = null;
+    function connectPresence() {
       if (!PRESENCE_URL) return;
-      try {
-        const r = await fetch(PRESENCE_URL + (PRESENCE_URL.includes('?') ? '&' : '?') + 'id=' + myId, { cache: 'no-store' });
-        const d = await r.json();
-        const n = typeof d === 'number' ? d : d.count;
-        remoteCount = Number.isFinite(n) ? n : null;
-      } catch (e) { remoteCount = null; }
-      showViewers();
+      let ws;
+      try { ws = new WebSocket(PRESENCE_URL.replace(/^http/, 'ws')); } catch (e) { return; }
+      presenceWS = ws;
+      ws.onopen = () => {
+        presenceRetry = 0;
+        clearInterval(presencePing);
+        presencePing = setInterval(() => { try { ws.send('ping'); } catch (e) {} }, 25000);
+      };
+      ws.onmessage = e => {
+        if (e.data === 'pong') return;
+        try {
+          const n = JSON.parse(e.data).count;
+          if (Number.isFinite(n)) { remoteCount = n; showViewers(); }
+        } catch (err) {}
+      };
+      ws.onclose = () => {
+        clearInterval(presencePing);
+        remoteCount = null;
+        showViewers();
+        setTimeout(connectPresence, Math.min(30000, 1000 * Math.pow(2, presenceRetry++)));
+      };
+      ws.onerror = () => { try { ws.close(); } catch (e) {} };
     }
-    remotePing();
-    setInterval(remotePing, 15000);
+    connectPresence();
     setInterval(showViewers, 5000);
     showViewers();
 
