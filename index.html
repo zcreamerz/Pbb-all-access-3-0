@@ -360,7 +360,7 @@
           <div class="chat-row">
             <button type="button" class="chat-tool" id="emoBtn" title="Emoji">😊</button>
             <button type="button" class="chat-tool gif" id="gifBtn" title="GIF">GIF</button>
-            <input id="chatText" maxlength="200" placeholder="Mag-chat..." autocomplete="off" />
+            <input id="chatText" maxlength="200" placeholder="Send a message..." autocomplete="off" />
             <button type="button" id="chatSend">Send</button>
           </div>
           <div class="chat-note" id="chatNote"></div>
@@ -1218,7 +1218,7 @@
     }
 
     function showGif() {
-      chatPop.innerHTML = '<input class="gif-search" id="gifQ" placeholder="Maghanap ng GIF..." maxlength="40" autocomplete="off" /><div class="gif-grid" id="gifGrid"></div>';
+      chatPop.innerHTML = '<input class="gif-search" id="gifQ" placeholder="Search" maxlength="40" autocomplete="off" /><div class="gif-grid" id="gifGrid"></div>';
       const q = $('gifQ'), g = $('gifGrid');
       q.addEventListener('input', () => { clearTimeout(gifTimer); gifTimer = setTimeout(() => loadGifs(q.value.trim(), g), 450); });
       q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(gifTimer); loadGifs(q.value.trim(), g); } });
