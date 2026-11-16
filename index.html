@@ -334,7 +334,7 @@
       </div>
 
       <div class="ctrl-right">
-        <div class="ctrl-group" title="Zoom (drag the video to move around when zoomed)">
+        <div class="ctrl-group" id="zoomGroup" title="Zoom (drag the video to move around when zoomed)">
           <button class="ctrl-btn txt" id="spdDown" type="button" aria-label="Zoom out">−</button>
           <span class="spd-val" id="spdVal">1.0x</span>
           <button class="ctrl-btn txt" id="spdUp" type="button" aria-label="Zoom in">+</button>
@@ -434,7 +434,7 @@
     const audioOn = { 1: false, 2: false, 3: false, 4: false }; // per-camera sound: all muted on load, any number can be turned on
     let audioLocked = false; // browser blocked sound-on autoplay until first click/tap
     let expanded = null;
-    let zoom = 1, panX = 0, panY = 0;
+    let zoom = 1, panX = 0, panY = 0, zoomKey = null;
     let currentQuality = 'AUTO';
     const volumes = { 1: 70, 2: 70, 3: 70, 4: 70 };
     const CAM_NAMES = { 1: 'Main Stage', 2: 'All Access', 3: 'External Den', 4: 'Dining Area' };
@@ -623,6 +623,7 @@
         grid.classList.add('four');
       }
       applyAudio();
+      applyZoom();
       updateNav();
       updateSlots();
       fitGrid();
@@ -749,24 +750,35 @@
     /* ---------------- Zoom ---------------- */
     const ZOOM_MIN = 1, ZOOM_MAX = 4, ZOOM_STEP = 0.25;
 
+    // zoom only exists when ONE video is shown (1-view or expanded)
+    function isSingle() { return expanded !== null || layout === 1; }
+
     function clampPan() {
-      // use the largest visible cam box for the limit
-      let w = 0, h = 0;
-      cams.forEach(c => { if (!c.classList.contains('off')) { w = Math.max(w, c.clientWidth); h = Math.max(h, c.clientHeight); } });
+      const c = [...cams].find(x => !x.classList.contains('off'));
+      const w = c ? c.clientWidth : 0, h = c ? c.clientHeight : 0;
       const mx = (zoom - 1) * w / 2, my = (zoom - 1) * h / 2;
       panX = Math.max(-mx, Math.min(mx, panX));
       panY = Math.max(-my, Math.min(my, panY));
     }
 
     function applyZoom() {
+      const single = isSingle();
+      // reset whenever the single video changes or we go back to multi-view
+      const key = single ? ([...cams].findIndex(x => !x.classList.contains('off'))) : null;
+      if (key !== zoomKey) { zoomKey = key; zoom = 1; panX = 0; panY = 0; }
+      if (!single) zoom = 1;
       if (zoom <= 1) { panX = 0; panY = 0; } else clampPan();
-      Object.values(videos).forEach(v => {
-        v.style.transform = zoom > 1 ? 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')' : '';
+      cams.forEach((c, i) => {
+        const v = videos[i + 1];
+        const on = single && zoom > 1 && !c.classList.contains('off');
+        if (v) v.style.transform = on ? 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')' : '';
+        c.classList.toggle('zoomed', on);
       });
-      cams.forEach(c => c.classList.toggle('zoomed', zoom > 1));
+      $('zoomGroup').style.display = single ? '' : 'none';
       $('spdVal').textContent = zoom.toFixed(2).replace(/0$/, '') + 'x';
     }
     function setZoom(z) {
+      if (!isSingle()) return;
       zoom = Math.round(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z)) * 100) / 100;
       applyZoom();
     }
@@ -775,6 +787,7 @@
 
     // mouse wheel zoom on the video
     cams.forEach(c => c.addEventListener('wheel', e => {
+      if (!isSingle()) return;
       e.preventDefault();
       setZoom(zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
     }, { passive: false }));
