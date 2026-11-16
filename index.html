@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PBB LIVE ACCESS – EARL</title>
-  <!-- Shaka Player (same library used by the working fan hub) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.11.2/shaka-player.compiled.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -29,95 +28,27 @@
       color: var(--text);
       height: 100vh;
       height: 100dvh;
-      display: grid;
-      grid-template-columns: 240px minmax(0, 1fr) auto;
-      grid-template-rows: minmax(0, 1fr);
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
     }
 
-    .sidebar {
-      background: var(--panel);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      padding: 20px 16px;
-      gap: 24px;
-      min-height: 0;
-      overflow-y: auto;
+    /* ---------- Header ---------- */
+    .top {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--bg);
+      flex-shrink: 0; gap: 12px;
     }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0 4px;
-    }
-
+    .logo { display: flex; align-items: center; gap: 10px; }
     .logo-icon {
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, #00d2a0, #00b4d8);
-      border-radius: 8px;
-      display: grid;
-      place-items: center;
-      font-weight: 700;
-      font-size: 13px;
-      color: #000;
+      width: 32px; height: 32px; background: linear-gradient(135deg, #00d2a0, #00b4d8);
+      border-radius: 8px; display: grid; place-items: center;
+      font-weight: 700; font-size: 13px; color: #000;
     }
-
     .logo h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; }
     .logo small { display: block; font-size: 0.65rem; color: var(--muted); letter-spacing: 0.5px; margin-top: 1px; }
 
-    .section { display: flex; flex-direction: column; gap: 8px; }
-    .section-title {
-      font-size: 0.68rem; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.8px; padding: 0 4px;
-    }
-
-    .cam-list { display: flex; flex-direction: column; gap: 4px; }
-
-    .cam-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 12px; border-radius: 8px; cursor: pointer;
-      transition: background 0.15s; font-size: 0.85rem; font-weight: 500;
-    }
-    .cam-item:hover { background: var(--card); }
-    .cam-item.active { background: var(--teal-dim); color: var(--teal); }
-
-    .cam-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--red); flex-shrink: 0;
-    }
-    .cam-item.active .cam-dot { background: var(--teal); }
-
-    .controls { display: flex; flex-direction: column; gap: 12px; margin-top: auto; }
-    .ctrl-row { display: flex; flex-direction: column; gap: 6px; }
-    .ctrl-row label { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
-
-    select, .action-btn {
-      width: 100%; background: var(--card); border: 1px solid var(--border);
-      color: var(--text); padding: 9px 12px; border-radius: 8px;
-      font-size: 0.84rem; font-family: inherit; cursor: pointer; transition: all 0.15s;
-    }
-    select:hover, .action-btn:hover { border-color: #3a4255; background: #1c202b; }
-    select:focus { outline: none; border-color: var(--teal); }
-
-    .action-btn.primary { background: var(--teal); border-color: var(--teal); color: #000; font-weight: 600; }
-    .action-btn.primary:hover { background: #00b890; border-color: #00b890; }
-    .action-btn.ghost { background: transparent; }
-
-    .vol-row { display: flex; align-items: center; gap: 10px; }
-    .vol-row input[type="range"] { flex: 1; accent-color: var(--teal); cursor: pointer; }
-
-    .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-
-    .top {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--panel);
-    }
-
-    .status-left { display: flex; align-items: center; gap: 12px; }
-
+    .status-right { display: flex; align-items: center; gap: 10px; }
     .live-pill {
       display: flex; align-items: center; gap: 7px;
       background: rgba(255, 77, 106, 0.12); color: var(--red);
@@ -128,13 +59,27 @@
       animation: pulse 1.4s infinite;
     }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .info-pill {
+      display: flex; align-items: center; gap: 7px; font-size: 0.78rem; color: var(--muted);
+      border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; background: var(--panel);
+    }
+    .info-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); display: block; }
 
-    .info-text { font-size: 0.8rem; color: var(--muted); }
+    /* ---------- Stage (grid + controls) ---------- */
+    .stage {
+      position: relative; flex: 1; min-height: 0; min-width: 0;
+      display: flex; flex-direction: column; background: var(--bg);
+    }
+    .stage:fullscreen { width: 100vw; height: 100vh; height: 100dvh; }
+    .stage:fullscreen.idle { cursor: none; }
 
     .grid {
       flex: 1; display: grid; gap: 10px; padding: 12px; min-height: 0; min-width: 0;
       justify-content: center; align-content: center; position: relative;
     }
+    .grid.one  { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+    .grid.two  { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
+    .grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 
     .fs-exit {
       display: none; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -144,13 +89,8 @@
       transition: opacity 0.3s, border-color 0.15s;
     }
     .fs-exit:hover { border-color: var(--teal); }
-    .fs-exit.idle { opacity: 0; pointer-events: none; }
-    .grid:fullscreen .fs-exit, .main:fullscreen .fs-exit { display: block; }
-
-    .grid.one  { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
-    .grid.two  { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); }
-    .grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
-    .grid:fullscreen { width: 100vw; height: 100vh; height: 100dvh; background: var(--bg); }
+    .stage:fullscreen .fs-exit { display: block; }
+    .stage.idle .fs-exit { opacity: 0; pointer-events: none; }
 
     .cam {
       position: relative; background: #000; border-radius: 12px; overflow: hidden;
@@ -158,12 +98,11 @@
     }
     .cam.off { display: none; }
     .cam.audio { border-color: var(--teal); }
-
+    .grid.one .cam { border-color: var(--border); }
     .cam video {
       position: absolute; inset: 0; width: 100%; height: 100%;
       object-fit: contain; display: block; background: #000;
     }
-
     .grid.two .cam, .grid.four .cam { cursor: pointer; }
 
     .back-btn {
@@ -173,19 +112,18 @@
       padding: 4px 10px; font-family: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer;
     }
     .cam.expanded .back-btn { display: block; }
-    .grid:fullscreen .cam.expanded .back-btn, .main:fullscreen .cam.expanded .back-btn { display: none; }
+    .stage:fullscreen .cam.expanded .back-btn { display: none; }
     .back-btn:hover { background: rgba(0,0,0,0.9); border-color: var(--teal); }
 
+    /* small per-camera speaker (multi-view only) */
     .audio-ctl {
       position: absolute; right: 8px; bottom: 8px; z-index: 7;
       display: flex; align-items: center; gap: 6px;
       background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); border-radius: 20px;
       padding: 3px 8px 3px 4px;
     }
-    .spk {
-      background: none; border: none; color: var(--text); font-size: 0.95rem;
-      line-height: 1; cursor: pointer; padding: 3px 4px;
-    }
+    .grid.one .audio-ctl { display: none; }
+    .spk { background: none; border: none; color: var(--text); font-size: 0.95rem; line-height: 1; cursor: pointer; padding: 3px 4px; }
     .cam .cam-vol { display: none; width: 70px; accent-color: var(--teal); cursor: pointer; }
     .cam.audio .cam-vol, .cam:hover .cam-vol { display: block; }
     .cam.audio .audio-ctl { border: 1px solid var(--teal); }
@@ -195,20 +133,12 @@
       display: flex; justify-content: space-between; align-items: flex-start;
       z-index: 5; pointer-events: none;
     }
-    .badge-live {
-      background: var(--red); color: #fff; font-size: 0.65rem; font-weight: 700;
-      padding: 3px 8px; border-radius: 4px; letter-spacing: 0.4px;
-    }
-    .badge-q {
-      background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); color: #c0c6d4;
-      font-size: 0.68rem; padding: 3px 8px; border-radius: 4px;
-    }
+    .badge-live { background: var(--red); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.4px; }
+    .badge-q { background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); color: #c0c6d4; font-size: 0.68rem; padding: 3px 8px; border-radius: 4px; }
 
     .overlay-bottom {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      padding: 28px 14px 12px;
-      background: linear-gradient(transparent, rgba(0,0,0,0.75));
-      z-index: 5; pointer-events: none;
+      position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 14px 12px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.75)); z-index: 5; pointer-events: none;
     }
     .cam-title { font-size: 0.9rem; font-weight: 600; }
     .cam-num { font-size: 0.7rem; color: #a0a8b8; margin-top: 2px; }
@@ -219,82 +149,90 @@
       gap: 12px; z-index: 4; color: var(--muted); font-size: 0.85rem;
     }
     .loader.hide { display: none; }
-
     .spin {
       width: 26px; height: 26px; border: 3px solid var(--border);
-      border-top-color: var(--teal); border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      border-top-color: var(--teal); border-radius: 50%; animation: spin 0.7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .chat {
-      display: none; width: 320px; min-height: 0; flex-direction: column;
-      background: var(--panel); border-left: 1px solid var(--border);
+    /* ---------- Player control bar ---------- */
+    .ctrl-bar {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 0 24px 8px; transition: opacity 0.3s; flex-wrap: wrap;
     }
-    body.chat-on .chat { display: flex; }
-    .chat-head {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 12px 14px; border-bottom: 1px solid var(--border);
+    .stage:fullscreen .ctrl-bar {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 15;
+      padding: 40px 24px 18px; background: linear-gradient(transparent, rgba(0,0,0,0.7));
+      pointer-events: none;
     }
-    .chat-head h2 { font-size: 0.9rem; font-weight: 700; }
-    .chat-head small { display: block; font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
-    .chat-close {
-      background: none; border: 1px solid var(--border); color: var(--muted);
-      border-radius: 6px; padding: 3px 9px; font-family: inherit; font-size: 0.75rem; cursor: pointer;
+    .stage:fullscreen .ctrl-bar .ctrl-group { pointer-events: auto; }
+    .stage.idle .ctrl-bar { opacity: 0; pointer-events: none; }
+    .ctrl-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .ctrl-group {
+      display: flex; align-items: center; gap: 4px;
+      background: rgba(18, 21, 28, 0.85); backdrop-filter: blur(6px);
+      border: 1px solid var(--border); border-radius: 999px; padding: 4px;
     }
-    .chat-close:hover { color: var(--text); border-color: var(--teal); }
-    .chat-msgs {
-      flex: 1; min-height: 0; overflow-y: auto; padding: 10px 14px;
-      display: flex; flex-direction: column; gap: 6px;
+    .ctrl-btn {
+      width: 34px; height: 34px; border-radius: 50%; border: none; background: transparent;
+      color: var(--text); cursor: pointer; display: grid; place-items: center;
+      transition: background 0.15s, color 0.15s; font-family: inherit;
     }
-    .chat-msg { font-size: 0.82rem; line-height: 1.35; word-break: break-word; }
-    .chat-msg b { font-weight: 600; margin-right: 6px; }
-    .chat-msg.me b::after { content: ' (ikaw)'; color: var(--muted); font-weight: 400; font-size: 0.7rem; }
-    .chat-msg.sys { color: var(--muted); font-size: 0.72rem; text-align: center; }
-    .chat-foot { border-top: 1px solid var(--border); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-    .chat-foot input {
-      width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text);
-      padding: 9px 12px; border-radius: 8px; font-family: inherit; font-size: 0.84rem;
+    .ctrl-btn:hover { background: var(--teal-dim); color: var(--teal); }
+    .ctrl-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .ctrl-btn.txt { font-size: 1.1rem; font-weight: 600; line-height: 1; }
+
+    #vol { width: 90px; accent-color: var(--teal); cursor: pointer; margin: 0 10px 0 2px; }
+    .spd-val {
+      min-width: 46px; text-align: center; font-size: 0.8rem; font-weight: 600;
+      font-variant-numeric: tabular-nums; color: var(--text);
     }
-    .chat-foot input:focus { outline: none; border-color: var(--teal); }
-    .chat-send-row { display: flex; gap: 8px; }
-    .chat-send-row .action-btn { width: auto; padding: 9px 16px; }
-    #chatName { font-size: 0.78rem; }
+    .q-select {
+      appearance: none; -webkit-appearance: none;
+      background: rgba(18, 21, 28, 0.85) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%237d8699' stroke-width='1.6' stroke-linecap='round'/></svg>") no-repeat right 12px center;
+      color: var(--text); border: 1px solid var(--border); border-radius: 999px;
+      padding: 9px 30px 9px 16px; font-family: inherit; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: border-color 0.15s;
+    }
+    .q-select:hover, .q-select:focus { outline: none; border-color: var(--teal); }
+    .q-select option { background: var(--panel); color: var(--text); }
+
+    /* ---------- Bottom nav pill ---------- */
+    .nav { flex-shrink: 0; display: flex; justify-content: center; padding: 6px 12px 16px; }
+    .nav-pill {
+      display: flex; align-items: center; gap: 4px; padding: 6px;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
+      max-width: 100%; overflow-x: auto; scrollbar-width: none;
+    }
+    .nav-pill::-webkit-scrollbar { display: none; }
+    .nav-btn {
+      display: flex; align-items: center; gap: 8px; white-space: nowrap;
+      padding: 10px 18px; border-radius: 999px; border: none; background: transparent;
+      color: var(--muted); font-family: inherit; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .nav-btn:hover { color: var(--text); background: var(--card); }
+    .nav-btn.active { background: var(--teal); color: #04120d; }
 
     @media (max-width: 800px) {
-      body {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: auto minmax(0, 1fr) auto;
-      }
-      .chat { width: auto; height: 38dvh; border-left: none; border-top: 1px solid var(--border); }
-      .sidebar {
-        flex-direction: row; flex-wrap: wrap; padding: 12px; gap: 12px;
-        border-right: none; border-bottom: 1px solid var(--border); overflow: visible;
-      }
-      .logo { flex: 1; }
-      .section { display: none; }
-      .controls {
-        flex-direction: row; flex-wrap: wrap; margin-top: 0; gap: 8px; width: 100%;
-      }
-      .ctrl-row { flex: 1; min-width: 120px; }
-      .controls .action-btn { flex: 1; width: auto; min-width: 120px; }
-      .top { padding: 8px 12px; }
+      .top { padding: 10px 12px; }
+      .info-pill { display: none; }
+      .ctrl-bar { padding: 0 8px 6px; }
+      #vol { display: none; }
       .grid { gap: 6px; padding: 6px; }
-      .grid.four {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: repeat(4, minmax(0, 1fr));
-      }
-      .grid.two {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: repeat(2, minmax(0, 1fr));
-      }
-      .cam video { object-fit: contain; }
+      .grid.four { grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(4, minmax(0, 1fr)); }
+      .grid.two  { grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+      .nav { padding: 4px 8px 12px; }
+      .nav-btn { padding: 10px 12px; }
+      .nav-btn:not(.active) span { display: none; }
     }
   </style>
 </head>
 <body>
 
-  <aside class="sidebar">
+  <header class="top">
     <div class="logo">
       <div class="logo-icon">PBB</div>
       <div>
@@ -302,67 +240,20 @@
         <small>Shaka + ClearKey</small>
       </div>
     </div>
-
-    <div class="section">
-      <div class="section-title">Cameras</div>
-      <div class="cam-list">
-        <div class="cam-item active" data-focus="0"><div class="cam-dot"></div>Main Stage</div>
-        <div class="cam-item" data-focus="1"><div class="cam-dot"></div>All Access</div>
-        <div class="cam-item" data-focus="2"><div class="cam-dot"></div>External Den</div>
-        <div class="cam-item" data-focus="3"><div class="cam-dot"></div>Dining Area</div>
-      </div>
+    <div class="status-right">
+      <div class="live-pill"><span></span> LIVE</div>
+      <div class="info-pill"><i></i><span id="statusText">Connecting 4 feeds…</span></div>
     </div>
+  </header>
 
-    <div class="controls">
-      <div class="ctrl-row">
-        <label>View Mode</label>
-        <select id="layout">
-          <option value="1">Single</option>
-          <option value="2">Dual</option>
-          <option value="4" selected>Quad</option>
-        </select>
-      </div>
-      <div class="ctrl-row">
-        <label>Quality</label>
-        <select id="quality">
-          <option value="AUTO" selected>AUTO</option>
-          <option value="1080">1080P</option>
-          <option value="720">720P</option>
-          <option value="480">480P</option>
-          <option value="360">360P</option>
-        </select>
-      </div>
-      <button class="action-btn primary" id="muteBtn">Unmute</button>
-      <button class="action-btn ghost" id="fsBtn">Fullscreen</button>
-      <button class="action-btn ghost" id="chatBtn" type="button">Live Chat: OFF</button>
-      <div class="ctrl-row">
-        <label id="volLabel">Volume</label>
-        <div class="vol-row">
-          <span style="font-size:0.8rem">🔊</span>
-          <input type="range" id="vol" min="0" max="100" value="70" />
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <div class="main">
-    <div class="top">
-      <div class="status-left">
-        <div class="live-pill"><span></span> LIVE</div>
-        <div class="info-text" id="statusText">Connecting 4 feeds…</div>
-      </div>
-    </div>
-
+  <div class="stage" id="stage">
     <div class="grid four" id="grid">
       <div class="cam" data-id="1">
         <div class="overlay-top"><span class="badge-live">LIVE</span><span class="badge-q" data-q>AUTO</span></div>
         <div class="loader" id="load1"><div class="spin"></div><span>Connecting...</span></div>
         <video id="v1" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
-        <div class="audio-ctl">
-          <button class="spk" type="button" title="Play audio">🔇</button>
-          <input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" />
-        </div>
+        <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
         <div class="overlay-bottom"><div class="cam-title">Main Stage</div><div class="cam-num">Camera 01 · Collab Cam</div></div>
       </div>
 
@@ -371,10 +262,7 @@
         <div class="loader" id="load2"><div class="spin"></div><span>Connecting...</span></div>
         <video id="v2" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
-        <div class="audio-ctl">
-          <button class="spk" type="button" title="Play audio">🔇</button>
-          <input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" />
-        </div>
+        <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
         <div class="overlay-bottom"><div class="cam-title">All Access</div><div class="cam-num">Camera 02</div></div>
       </div>
 
@@ -383,10 +271,7 @@
         <div class="loader" id="load3"><div class="spin"></div><span>Connecting...</span></div>
         <video id="v3" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
-        <div class="audio-ctl">
-          <button class="spk" type="button" title="Play audio">🔇</button>
-          <input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" />
-        </div>
+        <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
         <div class="overlay-bottom"><div class="cam-title">External Den</div><div class="cam-num">Camera 03</div></div>
       </div>
 
@@ -395,34 +280,69 @@
         <div class="loader" id="load4"><div class="spin"></div><span>Connecting...</span></div>
         <video id="v4" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
-        <div class="audio-ctl">
-          <button class="spk" type="button" title="Play audio">🔇</button>
-          <input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" />
-        </div>
+        <div class="audio-ctl"><button class="spk" type="button" title="Play audio">🔇</button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
         <div class="overlay-bottom"><div class="cam-title">Dining Area</div><div class="cam-num">Camera 04</div></div>
       </div>
 
       <button class="fs-exit" id="fsExit" type="button">← Back</button>
     </div>
-  </div>
 
-  <aside class="chat" id="chat">
-    <div class="chat-head">
-      <div><h2>Live Chat</h2><small id="chatMode"></small></div>
-      <button class="chat-close" id="chatClose" type="button">Close ✕</button>
-    </div>
-    <div class="chat-msgs" id="chatMsgs"></div>
-    <div class="chat-foot">
-      <input id="chatName" type="text" maxlength="16" placeholder="Pangalan mo (nickname)" autocomplete="off" />
-      <div class="chat-send-row">
-        <input id="chatInput" type="text" maxlength="200" placeholder="Mag-chat…" autocomplete="off" />
-        <button class="action-btn primary" id="chatSend" type="button">Send</button>
+    <!-- Player controls -->
+    <div class="ctrl-bar" id="ctrlBar">
+      <div class="ctrl-group">
+        <button class="ctrl-btn" id="muteBtn" type="button" title="Mute / Unmute"></button>
+        <input type="range" id="vol" min="0" max="100" value="70" title="Volume" />
+      </div>
+
+      <div class="ctrl-right">
+        <div class="ctrl-group" title="Playback speed">
+          <button class="ctrl-btn txt" id="spdDown" type="button" aria-label="Slower">−</button>
+          <span class="spd-val" id="spdVal">1.0x</span>
+          <button class="ctrl-btn txt" id="spdUp" type="button" aria-label="Faster">+</button>
+        </div>
+
+        <select class="q-select" id="quality" title="Quality">
+          <option value="AUTO" selected>Auto</option>
+          <option value="1080">1080p</option>
+          <option value="720">720p</option>
+          <option value="480">480p</option>
+          <option value="360">360p</option>
+        </select>
+
+        <div class="ctrl-group">
+          <button class="ctrl-btn" id="fsBtn" type="button" title="Fullscreen">
+            <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          </button>
+        </div>
       </div>
     </div>
-  </aside>
+  </div>
+
+  <!-- Bottom nav pill -->
+  <nav class="nav">
+    <div class="nav-pill" id="nav">
+      <button class="nav-btn" type="button" data-cam="0">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>Main</span>
+      </button>
+      <button class="nav-btn" type="button" data-cam="1">
+        <svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg><span>All Access</span>
+      </button>
+      <button class="nav-btn" type="button" data-cam="2">
+        <svg viewBox="0 0 24 24"><rect x="5" y="3" width="10" height="18" rx="1"/><path d="M15 9h4v12h-4M9 7h2M9 11h2M9 15h2"/></svg><span>External</span>
+      </button>
+      <button class="nav-btn" type="button" data-cam="3">
+        <svg viewBox="0 0 24 24"><path d="M6 3v7a2 2 0 0 0 2 2v9M4 3v5M8 3v5M18 3c-2 2-3 5-3 8h3v10"/></svg><span>Dining</span>
+      </button>
+      <button class="nav-btn" type="button" data-view="2">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg><span>2-view</span>
+      </button>
+      <button class="nav-btn" type="button" data-view="4">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M3 12h18"/></svg><span>All</span>
+      </button>
+    </div>
+  </nav>
 
   <script>
-    // Working Akamai streams + ClearKey (same mapping as the working fan hub)
     const ORIGIN = 'https://absp-live.akamaized.net';
 
     const STREAMS = {
@@ -448,65 +368,120 @@
       return { [kid]: key, [dashed]: key };
     }
 
+    const $ = id => document.getElementById(id);
     const players = {};
     const videos = {};
     let focus = 0;
+    let layout = 4;
     let muted = true;
     let audioId = 1;
     let expanded = null;
+    let speed = 1;
+    let currentQuality = 'AUTO';
     const volumes = { 1: 70, 2: 70, 3: 70, 4: 70 };
     const CAM_NAMES = { 1: 'Main Stage', 2: 'All Access', 3: 'External Den', 4: 'Dining Area' };
     let connectedCount = 0;
 
+    // AUTO keeps the original 720p cap so 4 feeds stay light
+    const AUTO_MAX_HEIGHT = 720;
+
     if (window.shaka) shaka.polyfill.installAll();
 
+    /* ---------------- Quality ---------------- */
+    function activeTrack(p) {
+      try { return p.getVariantTracks().find(t => t.active); } catch (e) { return null; }
+    }
+
+    function updateBadge(i) {
+      const el = document.querySelector('.cam[data-id="' + i + '"] [data-q]');
+      if (!el) return;
+      const p = players[i];
+      const tr = p && activeTrack(p);
+      const h = tr && tr.height ? tr.height + 'P' : '';
+      if (currentQuality === 'AUTO') el.textContent = h ? 'AUTO · ' + h : 'AUTO';
+      else el.textContent = h || (currentQuality + 'P');
+    }
+
+    function applyQualityTo(i) {
+      const p = players[i];
+      if (!p) return;
+      try {
+        const tracks = p.getVariantTracks();
+        if (!tracks.length) return;
+
+        if (currentQuality === 'AUTO') {
+          p.configure({ abr: { enabled: true, restrictions: { maxHeight: AUTO_MAX_HEIGHT } } });
+          return;
+        }
+
+        const target = +currentQuality;
+        const cur = tracks.find(t => t.active);
+        // stay on the same audio language so quality change doesn't swap the audio
+        let pool = cur ? tracks.filter(t => t.language === cur.language) : tracks;
+        if (!pool.length) pool = tracks;
+
+        const heights = [...new Set(pool.map(t => t.height || 0))].sort((a, b) => a - b);
+        let h = [...heights].reverse().find(x => x <= target);
+        if (h === undefined) h = heights[0];           // nothing that low -> lowest available
+        const best = pool.filter(t => (t.height || 0) === h)
+                         .sort((a, b) => b.bandwidth - a.bandwidth)[0];
+        if (!best) return;
+
+        // lock to this track: turn ABR off, remove caps, then switch right away
+        p.configure({ abr: { enabled: false, restrictions: { maxHeight: Infinity } } });
+        p.selectVariantTrack(best, true);
+      } catch (e) {
+        console.warn('Quality switch failed on cam', i, e);
+      }
+    }
+
+    function applyQuality() {
+      for (let i = 1; i <= 4; i++) {
+        applyQualityTo(i);
+        updateBadge(i);
+      }
+    }
+
+    /* ---------------- Players ---------------- */
     async function initPlayer(i) {
-      const vid = document.getElementById('v' + i);
+      const vid = $('v' + i);
       videos[i] = vid;
-      const loader = document.getElementById('load' + i);
+      const loader = $('load' + i);
+      vid.addEventListener('playing', () => { if (loader) loader.classList.add('hide'); });
 
       try {
         const player = new shaka.Player();
         await player.attach(vid);
+        players[i] = player;
 
         const keys = clearKeysFor(i);
         if (keys) {
-          player.configure({
-            drm: {
-              preferredKeySystems: ['org.w3.clearkey'],
-              clearKeys: keys
-            }
-          });
+          player.configure({ drm: { preferredKeySystems: ['org.w3.clearkey'], clearKeys: keys } });
         }
 
         player.configure({
-          abr: { restrictions: { maxHeight: 720 } },
-          manifest: {
-            dash: { clockSyncUri: 'https://time.akamai.com/?iso&ms' }
-          },
-          streaming: {
-            bufferingGoal: 20,
-            rebufferingGoal: 4,
-            bufferBehind: 30
-          }
+          abr: { enabled: true, restrictions: { maxHeight: AUTO_MAX_HEIGHT } },
+          manifest: { dash: { clockSyncUri: 'https://time.akamai.com/?iso&ms' } },
+          streaming: { bufferingGoal: 20, rebufferingGoal: 4, bufferBehind: 30 }
         });
 
-        player.addEventListener('error', (ev) => {
+        player.addEventListener('error', ev => {
           const detail = (ev && ev.detail) || {};
           console.warn('Cam', i, 'error', detail.code, detail.message || detail);
-          if (loader) {
-            loader.classList.remove('hide');
-            loader.innerHTML = '<span>Error · retrying…</span>';
-          }
         });
+        player.addEventListener('variantchanged', () => updateBadge(i));
+        player.addEventListener('adaptation', () => updateBadge(i));
 
         await player.load(STREAMS[i]);
         try { await vid.play(); } catch (e) {}
 
+        vid.playbackRate = speed;
+        applyQualityTo(i);
+        updateBadge(i);
+
         if (loader) loader.classList.add('hide');
         connectedCount++;
-        document.getElementById('statusText').textContent = connectedCount + ' / 4 feeds connected';
-        players[i] = player;
+        $('statusText').textContent = connectedCount + ' / 4 feeds connected';
       } catch (err) {
         console.error('Cam', i, 'failed', err);
         if (loader) {
@@ -518,20 +493,31 @@
 
     for (let i = 1; i <= 4; i++) initPlayer(i);
 
-    // UI
-    const grid = document.getElementById('grid');
+    /* ---------------- Layout / navigation ---------------- */
+    const grid = $('grid');
+    const stage = $('stage');
     const cams = document.querySelectorAll('.cam');
-    const layoutSel = document.getElementById('layout');
-    const camItems = document.querySelectorAll('.cam-item');
+    const navBtns = document.querySelectorAll('.nav-btn');
+
+    function updateNav() {
+      let key;
+      if (expanded !== null) key = 'cam' + expanded;
+      else if (layout === 1) key = 'cam' + focus;
+      else key = 'view' + layout;
+      navBtns.forEach(b => {
+        const k = b.dataset.cam !== undefined ? 'cam' + b.dataset.cam : 'view' + b.dataset.view;
+        b.classList.toggle('active', k === key);
+      });
+    }
 
     function setLayout(n) {
+      layout = n;
       cams.forEach(c => c.classList.remove('off', 'expanded'));
       grid.className = 'grid';
       if (expanded !== null) {
         grid.classList.add('one');
         cams.forEach((c, i) => {
-          if (i !== expanded) c.classList.add('off');
-          else c.classList.add('expanded');
+          if (i !== expanded) c.classList.add('off'); else c.classList.add('expanded');
         });
       } else if (n === 1) {
         grid.classList.add('one');
@@ -549,12 +535,28 @@
         if (first) audioId = +first.dataset.id;
       }
       applyAudio();
+      updateNav();
       fitGrid();
     }
 
-    const volSlider = document.getElementById('vol');
-    const volLabel = document.getElementById('volLabel');
-    const muteBtn = document.getElementById('muteBtn');
+    navBtns.forEach(b => {
+      b.addEventListener('click', () => {
+        expanded = null;
+        if (b.dataset.cam !== undefined) {
+          focus = +b.dataset.cam;
+          muted = false;
+          setLayout(1);
+        } else {
+          setLayout(+b.dataset.view);
+        }
+      });
+    });
+
+    /* ---------------- Audio ---------------- */
+    const volSlider = $('vol');
+    const muteBtn = $('muteBtn');
+    const ICON_VOL  = '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+    const ICON_MUTE = '<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>';
 
     function applyAudio() {
       for (let i = 1; i <= 4; i++) {
@@ -569,10 +571,9 @@
         c.querySelector('.spk').textContent = (id === audioId && !muted) ? '🔊' : '🔇';
         c.querySelector('.cam-vol').value = volumes[id];
       });
-      camItems.forEach((it, i) => it.classList.toggle('active', i === audioId - 1));
       volSlider.value = volumes[audioId];
-      volLabel.textContent = 'Volume · ' + CAM_NAMES[audioId];
-      muteBtn.textContent = muted ? 'Unmute' : 'Mute';
+      muteBtn.innerHTML = muted ? ICON_MUTE : ICON_VOL;
+      muteBtn.title = muted ? 'Unmute' : 'Mute';
     }
 
     function selectAudio(id, unmute) {
@@ -590,18 +591,18 @@
       if (fsFromExpanded && document.fullscreenElement) document.exitFullscreen().catch(() => {});
       fsFromExpanded = false;
       expanded = null;
-      setLayout(+layoutSel.value);
+      setLayout(layout);
     }
 
     cams.forEach((c, i) => {
       const id = +c.dataset.id;
       c.addEventListener('click', e => {
         if (e.target.closest('.audio-ctl, .back-btn')) return;
-        if (expanded === null && +layoutSel.value !== 1) {
+        if (expanded === null && layout !== 1) {
           expanded = i;
           audioId = id;
           muted = false;
-          setLayout(+layoutSel.value);
+          setLayout(layout);
         } else {
           selectAudio(id, true);
         }
@@ -621,6 +622,28 @@
       if (e.key === 'Escape' && expanded !== null && !document.fullscreenElement) goBack();
     });
 
+    muteBtn.addEventListener('click', () => { muted = !muted; applyAudio(); });
+    volSlider.addEventListener('input', e => {
+      volumes[audioId] = +e.target.value;
+      if (muted && volumes[audioId] > 0) muted = false;
+      applyAudio();
+    });
+
+    /* ---------------- Speed ---------------- */
+    function applySpeed() {
+      Object.values(videos).forEach(v => { try { v.playbackRate = speed; } catch (e) {} });
+      $('spdVal').textContent = (Number.isInteger(speed * 10) ? speed.toFixed(1) : speed.toFixed(2)) + 'x';
+    }
+    $('spdDown').addEventListener('click', () => { speed = Math.max(0.5, Math.round((speed - 0.25) * 100) / 100); applySpeed(); });
+    $('spdUp').addEventListener('click',   () => { speed = Math.min(2,   Math.round((speed + 0.25) * 100) / 100); applySpeed(); });
+
+    /* ---------------- Quality select ---------------- */
+    $('quality').addEventListener('change', e => {
+      currentQuality = e.target.value;
+      applyQuality();
+    });
+
+    /* ---------------- Grid fit ---------------- */
     function fitGrid() {
       const visible = [...cams].filter(c => !c.classList.contains('off'));
       const n = visible.length;
@@ -651,150 +674,44 @@
     window.addEventListener('resize', fitGrid);
     window.addEventListener('orientationchange', () => setTimeout(fitGrid, 200));
 
-    layoutSel.addEventListener('change', e => { expanded = null; setLayout(+e.target.value); });
-
-    camItems.forEach(item => {
-      item.addEventListener('click', () => {
-        focus = +item.dataset.focus;
-        expanded = null;
-        muted = false;
-        layoutSel.value = '1';
-        setLayout(1);
-      });
-    });
-
-    let currentQuality = 'AUTO';
-    const CAP = { AUTO: 720, '1080': 1080, '720': 720, '480': 480, '360': 360 };
-
-    function applyQuality() {
-      const maxH = CAP[currentQuality] || 720;
-      Object.values(players).forEach(p => {
-        try { p.configure({ abr: { restrictions: { maxHeight: maxH } } }); } catch (e) {}
-      });
-      document.querySelectorAll('[data-q]').forEach(t => {
-        t.textContent = currentQuality === 'AUTO' ? 'AUTO' : currentQuality + 'P';
-      });
+    /* ---------------- Fullscreen + idle hide ---------------- */
+    const fsExit = $('fsExit');
+    let idleTimer;
+    function wake() {
+      stage.classList.remove('idle');
+      clearTimeout(idleTimer);
+      if (document.fullscreenElement) {
+        idleTimer = setTimeout(() => stage.classList.add('idle'), 3000);
+      }
     }
-
-    document.getElementById('quality').addEventListener('change', e => {
-      currentQuality = e.target.value;
-      applyQuality();
+    ['mousemove', 'touchstart', 'click', 'keydown'].forEach(ev =>
+      stage.addEventListener(ev, wake, { passive: true })
+    );
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) wake();
+      else { clearTimeout(idleTimer); stage.classList.remove('idle'); }
+      setTimeout(fitGrid, 100);
     });
 
-    muteBtn.addEventListener('click', () => { muted = !muted; applyAudio(); });
-    volSlider.addEventListener('input', e => {
-      volumes[audioId] = +e.target.value;
-      applyAudio();
-    });
-
-    const fsExit = document.getElementById('fsExit');
-    let fsIdleTimer;
-    function wakeFsExit() {
-      fsExit.classList.remove('idle');
-      clearTimeout(fsIdleTimer);
-      fsIdleTimer = setTimeout(() => {
-        if (document.fullscreenElement) fsExit.classList.add('idle');
-      }, 3000);
-    }
     fsExit.addEventListener('click', () => {
       if (expanded !== null) goBack();
       else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     });
-    ['mousemove', 'touchstart', 'click'].forEach(ev =>
-      grid.addEventListener(ev, () => { if (document.fullscreenElement) wakeFsExit(); }, { passive: true })
-    );
-    document.addEventListener('fullscreenchange', () => {
-      if (document.fullscreenElement) wakeFsExit();
-      else { clearTimeout(fsIdleTimer); fsExit.classList.remove('idle'); }
-    });
 
-    document.getElementById('fsBtn').addEventListener('click', () => {
-      const target = document.getElementById('grid');
-      if (!document.fullscreenElement) {
-        target.requestFullscreen().catch(() => document.querySelector('.main').requestFullscreen());
+    $('fsBtn').addEventListener('click', () => {
+      if (document.fullscreenElement) { document.exitFullscreen(); return; }
+      if (stage.requestFullscreen) {
+        stage.requestFullscreen().catch(() => {});
+      } else if (stage.webkitRequestFullscreen) {
+        stage.webkitRequestFullscreen();
       } else {
-        document.exitFullscreen();
+        // iPhone Safari: only the video element can go fullscreen
+        const v = videos[audioId];
+        if (v && v.webkitEnterFullscreen) v.webkitEnterFullscreen();
       }
     });
 
-    // Local chat
-    const chatMsgs = document.getElementById('chatMsgs');
-    const chatInput = document.getElementById('chatInput');
-    const chatName = document.getElementById('chatName');
-    const chatBtn = document.getElementById('chatBtn');
-    const seenIds = new Set();
-    let chatOn = false, chatBC = null, lastSent = 0;
-
-    const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
-    const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
-    chatName.value = lsGet('pbbChatName') || '';
-
-    function nameColor(n) {
-      let h = 0;
-      for (const ch of n) h = (h * 31 + ch.charCodeAt(0)) % 360;
-      return `hsl(${h}, 70%, 68%)`;
-    }
-
-    function addMsg(m, mine) {
-      if (m.id && seenIds.has(m.id)) return;
-      if (m.id) seenIds.add(m.id);
-      const near = chatMsgs.scrollHeight - chatMsgs.scrollTop - chatMsgs.clientHeight < 60;
-      const d = document.createElement('div');
-      if (m.sys) {
-        d.className = 'chat-msg sys';
-        d.textContent = m.t;
-      } else {
-        d.className = 'chat-msg' + (mine ? ' me' : '');
-        const b = document.createElement('b');
-        b.textContent = m.n;
-        b.style.color = nameColor(m.n);
-        d.append(b, document.createTextNode(m.t));
-      }
-      chatMsgs.appendChild(d);
-      while (chatMsgs.children.length > 100) chatMsgs.firstChild.remove();
-      if (near || mine) chatMsgs.scrollTop = chatMsgs.scrollHeight;
-    }
-
-    function setChat(on) {
-      chatOn = on;
-      document.body.classList.toggle('chat-on', on);
-      chatBtn.textContent = 'Live Chat: ' + (on ? 'ON' : 'OFF');
-      chatBtn.classList.toggle('primary', on);
-      chatBtn.classList.toggle('ghost', !on);
-      lsSet('pbbChatOn', on ? '1' : '0');
-      if (on) {
-        if (!chatMsgs.children.length) addMsg({ sys: true, t: 'Welcome sa Live Chat! Maging magalang po.' });
-        chatBC = new BroadcastChannel('pbb-chat');
-        chatBC.onmessage = e => addMsg(e.data, false);
-      } else if (chatBC) {
-        chatBC.close();
-        chatBC = null;
-      }
-      setTimeout(fitGrid, 0);
-    }
-
-    function sendChat() {
-      const t = chatInput.value.trim().slice(0, 200);
-      const n = (chatName.value.trim().slice(0, 16)) || 'Guest';
-      if (!t) return;
-      const now = Date.now();
-      if (now - lastSent < 1500) return;
-      lastSent = now;
-      lsSet('pbbChatName', chatName.value.trim());
-      chatInput.value = '';
-      const local = { n, t, ts: now, id: 'l' + now + Math.random().toString(36).slice(2, 6) };
-      addMsg(local, true);
-      if (chatBC) chatBC.postMessage(local);
-    }
-
-    chatBtn.addEventListener('click', () => setChat(!chatOn));
-    document.getElementById('chatClose').addEventListener('click', () => setChat(false));
-    document.getElementById('chatSend').addEventListener('click', sendChat);
-    chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
-
-    const savedChat = lsGet('pbbChatOn');
-    setChat(savedChat === null ? window.innerWidth > 800 : savedChat === '1');
-
+    applySpeed();
     setLayout(4);
   </script>
 </body>
