@@ -333,9 +333,8 @@
 <body>
 
   <div id="fileWarn" style="display:none;background:#3a2d0c;color:#ffe5a6;padding:10px 14px;font-size:13px;line-height:1.45;border-bottom:1px solid #5a4a1f;text-align:center">
-    <b>Tip:</b> Naka-open ito bilang local file (<code>file://</code>) — CORS proxy ang ginagamit.
-    Mas reliable kung i-serve mo: <code>python -m http.server 8080</code> tapos buksan ang
-    <code>http://localhost:8080/indextest.html</code> (Chrome/Edge).
+    <b>CORS:</b> Kung <code>file://</code> o Static Site (ibang domain) ang origin, hindi maglo-load ang MPD mula sa pbblive.top.
+    Kailangan same-origin proxy (hal. Web Service) o i-host kung saan available ang <code>/mpd-cache/</code>.
   </div>
 
   <header class="top">
@@ -498,41 +497,19 @@
   </nav>
 
   <script>
-    // Base host that serves the /mpd-cache/ manifests (from pbb2 config)
-    const MPD_BASE = 'https://pbblive.top';
-
-    // file:// → origin "null" → browser blocks fetch (no CORS). Proxy those hosts.
-    // Akamai segment CDN already sends Access-Control-Allow-Origin: *.
+    // Exact map from pbb2 PBB_STREAMS_FALLBACK.
+    // Use relative /mpd-cache/* with serve-pbb.py (same-origin proxy) — no public CORS proxy.
     const IS_FILE = location.protocol === 'file:' || location.origin === 'null';
-    const NEEDS_CORS_PROXY = IS_FILE || !/^(pbblive\.top|.*\.pbblive\.top|pbblive\.pages\.dev|.*\.pages\.dev)$/i.test(location.hostname || '');
+    const MPD_BASE = IS_FILE ? 'https://pbblive.top' : '';
 
-    function corsProxy(url) {
-      if (!NEEDS_CORS_PROXY) return url;
-      try {
-        const u = new URL(url, location.href);
-        if (/pbblive\.top$|\.pages\.dev$/i.test(u.hostname)) {
-          return 'https://corsproxy.io/?' + encodeURIComponent(u.href);
-        }
-      } catch (e) {}
-      return url;
-    }
-
-    // Channel order matches the 4 cameras (from pasted-text PBB_STREAMS_FALLBACK)
-    // all = Main Stage, main = All Access/Living, ext = External, din = Dining
-    const STREAMS_RAW = {
+    // 1 Main Stage=all, 2 All Access=main, 3 External=ext, 4 Dining=din
+    const STREAMS = {
       1: MPD_BASE + '/mpd-cache/all-v3.mpd',
       2: MPD_BASE + '/mpd-cache/main-v3.mpd',
       3: MPD_BASE + '/mpd-cache/ext-v3.mpd',
       4: MPD_BASE + '/mpd-cache/din-v3.mpd'
     };
-    const STREAMS = {
-      1: corsProxy(STREAMS_RAW[1]),
-      2: corsProxy(STREAMS_RAW[2]),
-      3: corsProxy(STREAMS_RAW[3]),
-      4: corsProxy(STREAMS_RAW[4])
-    };
 
-    // kid:key pairs from the working pbb2 fallback config
     const CLEAR_KEYS = {
       1: '8150b74d16324bb4b2ff62e3e202fc7a:0c5ed4f9db9d4ee61bbc91b3a51ef8b5', // all
       2: '1044e7ece2d741bcafe80d8613da104f:f5e17f169ff05ea40c5d3f065f523942', // main
@@ -549,21 +526,8 @@
       return { [kid]: key, [dashed]: key };
     }
 
-    // Rewrite any follow-up Shaka requests to pbblive.top through the CORS proxy
     function installCorsFilter(player) {
-      if (!NEEDS_CORS_PROXY || !player || !player.getNetworkingEngine) return;
-      player.getNetworkingEngine().registerRequestFilter(function (type, request) {
-        if (!request || !request.uris) return;
-        request.uris = request.uris.map(function (u) {
-          try {
-            const abs = new URL(u, STREAMS_RAW[1]).href;
-            if (/pbblive\.top$|\.pages\.dev$/i.test(new URL(abs).hostname)) {
-              return 'https://corsproxy.io/?' + encodeURIComponent(abs);
-            }
-          } catch (e) {}
-          return u;
-        });
-      });
+      // no-op when using serve-pbb.py (same-origin /mpd-cache proxy)
     }
 
     const $ = id => document.getElementById(id);
