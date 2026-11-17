@@ -388,7 +388,7 @@
         <video id="v1" muted playsinline crossorigin="anonymous"></video>
         <button class="back-btn" type="button">← Back</button>
         <div class="audio-ctl"><button class="spk" type="button" title="Turn on sound for this camera"></button><input class="cam-vol" type="range" min="0" max="100" value="70" title="Volume" /></div>
-        <div class="overlay-bottom"><div class="cam-title">Main Stage</div></div>
+        <div class="overlay-bottom"><div class="cam-title">House Live</div></div>
       </div>
 
       <div class="cam" data-id="2">
@@ -497,24 +497,23 @@
   </nav>
 
   <script>
-    // Exact map from pbb2 PBB_STREAMS_FALLBACK.
-    // Use relative /mpd-cache/* with serve-pbb.py (same-origin proxy) — no public CORS proxy.
-    const IS_FILE = location.protocol === 'file:' || location.origin === 'null';
-    const MPD_BASE = IS_FILE ? 'https://pbblive.top' : '';
+    // Direct Akamai origins (from Actroo/pbb bundle) — ACAO:* so static HTML on Render works.
+    // house-live / all-access / external-den / dining-area
+    const ORIGIN = 'https://absp-live.akamaized.net/dash/live/2099522';
 
-    // 1 Main Stage=all, 2 All Access=main, 3 External=ext, 4 Dining=din
     const STREAMS = {
-      1: MPD_BASE + '/mpd-cache/all-v3.mpd',
-      2: MPD_BASE + '/mpd-cache/main-v3.mpd',
-      3: MPD_BASE + '/mpd-cache/ext-v3.mpd',
-      4: MPD_BASE + '/mpd-cache/din-v3.mpd'
+      1: ORIGIN + '/pinoybigbrothercollabedition30live/manifest.mpd',           // House / Main Stage
+      2: ORIGIN + '/pbbcollab30allaccesslivestream/manifest.mpd',              // All Access
+      3: ORIGIN + '/pbbcollab30allaccesslivestream-externalden/manifest.mpd',  // External Den
+      4: ORIGIN + '/pbbcollab30allaccesslivestream-diningarea/manifest.mpd'    // Dining Area
     };
 
+    // ClearKey kid:key (same as pbb2 / Actroo)
     const CLEAR_KEYS = {
-      1: '8150b74d16324bb4b2ff62e3e202fc7a:0c5ed4f9db9d4ee61bbc91b3a51ef8b5', // all
-      2: '1044e7ece2d741bcafe80d8613da104f:f5e17f169ff05ea40c5d3f065f523942', // main
-      3: 'b750a40736a24e60b5a4f256208b92c5:af07292597f692726dcac2bd297ddf8e', // ext
-      4: 'ea6588d030c94ca89925ac0c49974430:3e6de4afee1eff8e14f9506b76ac9ee6'  // din
+      1: '1044e7ece2d741bcafe80d8613da104f:f5e17f169ff05ea40c5d3f065f523942', // house-live
+      2: '8150b74d16324bb4b2ff62e3e202fc7a:0c5ed4f9db9d4ee61bbc91b3a51ef8b5', // all-access
+      3: 'b750a40736a24e60b5a4f256208b92c5:af07292597f692726dcac2bd297ddf8e', // external-den
+      4: 'ea6588d030c94ca89925ac0c49974430:3e6de4afee1eff8e14f9506b76ac9ee6'  // dining-area
     };
 
     function clearKeysFor(camId) {
@@ -526,8 +525,15 @@
       return { [kid]: key, [dashed]: key };
     }
 
+    // Akamai often requires a browser-like Referer; set it on every request.
     function installCorsFilter(player) {
-      // no-op when using serve-pbb.py (same-origin /mpd-cache proxy)
+      if (!player || !player.getNetworkingEngine) return;
+      player.getNetworkingEngine().registerRequestFilter(function (type, request) {
+        if (!request) return;
+        request.headers = request.headers || {};
+        request.headers['Referer'] = 'https://www.iwanttfc.com/';
+        request.headers['Origin'] = 'https://www.iwanttfc.com';
+      });
     }
 
     const $ = id => document.getElementById(id);
@@ -544,7 +550,7 @@
     let zoom = 1, panX = 0, panY = 0, zoomKey = null;
     let currentQuality = 'AUTO';
     const volumes = { 1: 70, 2: 70, 3: 70, 4: 70 };
-    const CAM_NAMES = { 1: 'Main Stage', 2: 'All Access', 3: 'External Den', 4: 'Dining Area' };
+    const CAM_NAMES = { 1: 'House Live', 2: 'All Access', 3: 'External Den', 4: 'Dining Area' };
 
     // AUTO keeps the original 720p cap so 4 feeds stay light
     const AUTO_MAX_HEIGHT = 720;
